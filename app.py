@@ -6,6 +6,11 @@ import pandas as pd
 from utils_app import global_context
 
 
+def init_app(json_path):
+    # data = json.load(json_path)
+    # with gr.Blocks as demo:
+    pass
+
 def init_database(df):
     df = df.round(2)
     df["Matches"] = df["Wins"] + df["Losses"]
@@ -17,25 +22,11 @@ def init_database(df):
     df["Rating"] = 0.65 * df["K/D"] + 0.024 * df["KPM"] + 0.016 * df["APM"] - 0.025 * df["DPM"] + 0.0035 * df["ADR"]
     df["Rating"] = df["Rating"].round(2)
     df = df.fillna(0)
-    df.sort_values('Rating', ascending=False)
+    df.sort_values('Rating')
     return df
 
 def update_database():
-    df_new = df.round(2)
-    df_new["Matches"] = df["Wins"] + df["Losses"]
-    df_new["KPM"] = (df["TKills"] / df["Matches"]).round(2)
-    df_new["DPM"] = (df["TDeaths"] / df["Matches"]).round(2)
-    df_new["APM"] = (df["TAssists"] / df["Matches"]).round(2)
-    df_new["K/D"] = (df["TKills"] / df["TDeaths"]).round(2)
-    df_new["ADR"] = (df["TADR"] / df["Matches"]).round(2)
-    df_new["Rating"] = (0.65 * df_new["K/D"] + 0.024 * df_new["KPM"] + 0.016 * df_new["APM"] - 0.025 * df_new["DPM"] + 0.0035 * df_new["ADR"]).round(2)
-    # df_new = df_new.round(2)
-    df_new = df_new.fillna(0)
-    df_new = df_new.sort_values('Rating', ascending=False)
-    top_1 = gr.Label(df_new.iloc[0]["Name"], label="Top 1")
-    top_2 = gr.Label(df_new.iloc[1]["Name"], label="Top 2")
-    top_3 = gr.Label(df_new.iloc[2]["Name"], label="Top 3")
-    return gr.DataFrame(df_new, label="VCT Superserver Season 2"), top_1, top_2, top_3
+    return gr.DataFrame(df, label="VCT Superserver Season 2")
 
 def init_game(lineup_1, lineup_2):
     players_1 = lineup_1.split(",")
@@ -50,9 +41,7 @@ def save_database_csv():
     df.to_csv(global_context["database_path"])
     return True
 
-
 def submit_match(lineup_1, lineup_2, result_1, result_2):
-    print(df)
     players_1 = lineup_1.split(",")
     players_2 = lineup_2.split(",")
     for player in players_1:
@@ -63,8 +52,6 @@ def submit_match(lineup_1, lineup_2, result_1, result_2):
         df.loc[df["Name"] == player, "TDeaths"] += int(result_1.loc[result_1["Name"] == player]["D"])
         df.loc[df["Name"] == player, "TAssists"] += int(result_1.loc[result_1["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_1.loc[result_1["Name"] == player]["ADR"])
-        df.loc[df["Name"] == player, "MVP"] += int(result_1.loc[result_1["Name"] == player]["MVP"])
-        
 
     for player in players_2:
         print(df.loc[df["Name"] == player])
@@ -75,23 +62,50 @@ def submit_match(lineup_1, lineup_2, result_1, result_2):
         df.loc[df["Name"] == player, "TAssists"] += int(result_2.loc[result_2["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_2.loc[result_2["Name"] == player]["ADR"])
     
-    # print(df)
-    database, top_1, top_2, top_3 = update_database()
-    return database, top_1, top_2, top_3
-    
+    df = df.round(2)
+    df["Matches"] = df["Wins"] + df["Losses"]
+    df["KPM"] = (df["TKills"] / df["Matches"]).round(2)
+    df["DPM"] = (df["TDeaths"] / df["Matches"]).round(2)
+    df["APM"] = (df["TAssists"] / df["Matches"]).round(2)
+    df["K/D"] = (df["TKills"] / df["TDeaths"]).round(2)
+    df["ADR"] = (df["TADR"] / df["Matches"]).round(2)
+    df["Rating"] = 0.65 * df["K/D"] + 0.024 * df["KPM"] + 0.016 * df["APM"] - 0.025 * df["DPM"] + 0.0035 * df["ADR"]
+    df["Rating"] = df["Rating"].round(2)
+    df = df.fillna(0)
+    df.sort_values('Rating')
+
+    return gr.Dataframe(df, label="VCT Superserver Season 2")
 
 if __name__ == '__main__':
+    # csv_path = './database_compressed.csv'
+    # df = pd.read_csv(csv_path)
+    # # Postprocess stats
+    
+    # df = df.round(2)
+    # df["Matches"] = df["Wins"] + df["Losses"]
+    # df["KPM"] = (df["TKills"] / df["Matches"]).round(2)
+    # df["DPM"] = (df["TDeaths"] / df["Matches"]).round(2)
+    # df["APM"] = (df["TAssists"] / df["Matches"]).round(2)
+    # df["K/D"] = (df["TKills"] / df["TDeaths"]).round(2)
+    # df["ADR"] = (df["TADR"] / df["Matches"]).round(2)
+    # df["Rating"] = 0.65 * df["K/D"] + 0.024 * df["KPM"] + 0.016 * df["APM"] - 0.025 * df["DPM"] + 0.0035 * df["ADR"]
+    # df["Rating"] = df["Rating"].round(2)
+    # df = df.fillna(0)
+    # df.sort_values('Rating')
+
+    # styler = df.style.highlight_max(color = 'lightgreen', axis = 0)
+    # init_app(json_path)
     with gr.Blocks() as app:
         df = global_context["database"]
+        print(df)
         with gr.Tab("Database"):
             with gr.Row():
                 gr.Markdown("Welcome to Valorant Superserver - Season 2")
                 update_button = gr.Button(value="Update", scale=0)
                 save_button = gr.Button(value="Save Database", scale=0)
             with gr.Row():
-                top_1 = gr.Label(df.iloc[0]["Name"], label="Top 1")
-                top_2 = gr.Label(df.iloc[1]["Name"], label="Top 2")
-                top_3 = gr.Label(df.iloc[2]["Name"], label="Top 3")
+                gr.Label(df.iloc[0]["Name"], label="Best Rating")
+                gr.Label(df.iloc[-1]["Name"], label="Worst Rating")
             database = gr.DataFrame(df, label="VCT Superserver Season 2")
         
         save_button.click(save_database_csv, None, None)
@@ -108,9 +122,8 @@ if __name__ == '__main__':
             lineup_2 = gr.Textbox(label="Team 2 Players",
                                   value=None,
                                   interactive=True)
-            with gr.Row():
-                team_1 = gr.Dataframe(visible=False)
-                team_2 = gr.Dataframe(visible=False)
+            team_1 = gr.Dataframe(visible=False)
+            team_2 = gr.Dataframe(visible=False)
             with gr.Row():
                 team_1_result = gr.Dataframe(headers=["Name", "K", "D", "A", "ADR", "MVP"],
                                              datatype=["str", "number", "number", "number", "number", "number"],
@@ -124,7 +137,9 @@ if __name__ == '__main__':
                                              interactive=True,
                                              label="Losing Team",
                                             )
+            gr.DataFrame(df, label="VCT Superserver Season 2")
+        # print(df.to_json(orient="records"))
         create_button.click(init_game, [lineup_1, lineup_2], [team_1, team_2])
-        submit_button.click(submit_match, [lineup_1, lineup_2, team_1_result, team_2_result], [database, top_1, top_2, top_3])
+        submit_button.click(submit_match, [lineup_1, lineup_2, team_1_result, team_2_result], database)
 
     app.launch()

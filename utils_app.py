@@ -5,7 +5,6 @@ df = pd.read_csv(csv_path)
 
 # Postprocess stats
 df = df.round(2)
-# df = df.drop(columns=['Unnamed: 0.1', "Unnamed: 0"])
 df["Matches"] = df["Wins"] + df["Losses"]
 df["KPM"] = (df["TKills"] / df["Matches"]).round(2)
 df["DPM"] = (df["TDeaths"] / df["Matches"]).round(2)
@@ -21,3 +20,6 @@ global_context = {
     "database": df,
     "database_path": csv_path
 }
+
+# 100T Kyedae,214 anhster,GEN lakia,FNC chronicle,DSG Juicy
+# EDG s1mon,TLN primmie,TL jamppi,SEN Tenz,C9 xeppaa

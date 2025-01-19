@@ -63,6 +63,7 @@ def save_database_csv():
     return True
 
 def save_match_history(team_1_result, team_2_result):
+    os.makedirs('./match_history', exist_ok=True)
     match_num = len(os.listdir('./match_history'))
     os.makedirs(f'./match_history/match_{match_num+1}', exist_ok=True)
     team_1_result.to_csv(f'./match_history/match_{match_num+1}/t1.csv', index=False)

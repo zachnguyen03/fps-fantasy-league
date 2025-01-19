@@ -1,6 +1,6 @@
 import pandas as pd
 
-csv_path = './database_compressed.csv'
+csv_path = './data/sample.csv'
 df = pd.read_csv(csv_path)
 
 # Postprocess stats

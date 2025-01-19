@@ -108,7 +108,7 @@ if __name__ == '__main__':
         print(df.columns)
         with gr.Tab("Database"):
             with gr.Row():
-                gr.Markdown("Welcome to Valorant Superserver - Season 2")
+                gr.Markdown("Welcome to Valo:GO Fantasy League - Season 1")
                 update_button = gr.Button(value="Update", scale=0)
                 save_button = gr.Button(value="Save Database", scale=0)
             with gr.Row():

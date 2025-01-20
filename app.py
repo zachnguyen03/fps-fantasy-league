@@ -58,6 +58,11 @@ def init_game(t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5):
     team_2 = gr.Dataframe(df_2[["Name", "Matches", "Rating", "ELO"]], label="Team 2", interactive=False, visible=True)
     return team_1, team_2, elo_diff, t1_gain, t2_gain, win_team
 
+
+def get_rating(kd, kpm, apm, dpm, adr):
+    return round(0.65*kd + 0.024*kpm + 0.016*apm - 0.025*dpm + 0.0035*adr,2)
+
+
 def save_database_csv():
     df.to_csv(global_context["database_path"], index=False)
     return True
@@ -73,12 +78,14 @@ def save_match_history(team_1_result, team_2_result):
 def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
     players_1 = result_1["Name"].to_list()
     players_2 = result_2["Name"].to_list()
+    average_elo = (df.loc[df["Name"].isin(players_1)]["ELO"].sum() + df.loc[df["Name"].isin(players_2)]["ELO"].sum())//10
+    print("Average elo: ", average_elo)
     if win_team == "Team 1":
         elo = t1_gain
     else:
         elo = t2_gain
     for player in players_1:
-        print(df.loc[df["Name"] == player])
+        # print(df.loc[df["Name"] == player])
         df.loc[df["Name"] == player, 'Matches'] += 1
         df.loc[df["Name"] == player, "Wins"] += 1
         df.loc[df["Name"] == player, "TKills"] += int(result_1.loc[result_1["Name"] == player]["K"])
@@ -86,7 +93,12 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         df.loc[df["Name"] == player, "TAssists"] += int(result_1.loc[result_1["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_1.loc[result_1["Name"] == player]["ADR"])
         df.loc[df["Name"] == player, "MVP"] += int(result_1.loc[result_1["Name"] == player]["MVP"])
-        df.loc[df["Name"] == player, "ELO"] += (int(elo) + int(result_1.loc[result_1["Name"] == player]["MVP"]) * 10)
+        rating = get_rating(int(result_1.loc[result_1["Name"] == player]["K"])/int(result_1.loc[result_1["Name"] == player]["D"]),
+                            int(result_1.loc[result_1["Name"] == player]["K"]),
+                            int(result_1.loc[result_1["Name"] == player]["A"]),
+                            int(result_1.loc[result_1["Name"] == player]["D"]),
+                            int(result_1.loc[result_1["Name"] == player]["ADR"]))
+        df.loc[df["Name"] == player, "ELO"] += int(int(elo) + rating * 10 - average_elo * 0.01 + int(result_1.loc[result_1["Name"] == player]["MVP"]) * 10)
 
     for player in players_2:
         print(df.loc[df["Name"] == player])
@@ -97,8 +109,12 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         df.loc[df["Name"] == player, "TAssists"] += int(result_2.loc[result_2["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_2.loc[result_2["Name"] == player]["ADR"])
         df.loc[df["Name"] == player, "ELO"] -= int(elo)
-    
-    # print(df)
+        rating = get_rating(int(result_2.loc[result_2["Name"] == player]["K"])/int(result_2.loc[result_2["Name"] == player]["D"]),
+                            int(result_2.loc[result_2["Name"] == player]["K"]),
+                            int(result_2.loc[result_2["Name"] == player]["A"]),
+                            int(result_2.loc[result_2["Name"] == player]["D"]),
+                            int(result_2.loc[result_2["Name"] == player]["ADR"]))
+        df.loc[df["Name"] == player, "ELO"] += int(int(elo) + rating * 10 - average_elo * 0.01 + int(result_2.loc[result_2["Name"] == player]["MVP"]) * 10)
     database, top_1, top_2, top_3 = update_database()
     return database, top_1, top_2, top_3
     
@@ -123,16 +139,9 @@ if __name__ == '__main__':
 
         with gr.Tab("Live game"):
             with gr.Row():
-                # gr.Markdown("There is no live game")
                 create_button = gr.Button(value="Create game", scale=0)
                 submit_button = gr.Button(value="Submit", scale=0)
                 save_button = gr.Button(value="Save match", scale=0)
-            # lineup_1 = gr.Textbox(label="Team 1 Players",
-            #                       value=None,
-            #                       interactive=True)
-            # lineup_2 = gr.Textbox(label="Team 2 Players",
-            #                       value=None,
-            #                       interactive=True)
             with gr.Row():
                 gr.Markdown("Team 1")
                 t1p1 = gr.Dropdown(sorted(df["Name"].to_list()), label="P1")

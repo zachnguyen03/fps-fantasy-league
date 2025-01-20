@@ -1,6 +1,7 @@
 import pandas as pd
 
-csv_path = './data/sample.csv'
+csv_path = './database_compressed.csv'
+# csv_path = './data/sample.csv'
 df = pd.read_csv(csv_path)
 
 # Postprocess stats
@@ -14,6 +15,7 @@ df["ADR"] = (df["TADR"] / df["Matches"]).round(2)
 df["Rating"] = 0.65 * df["K/D"] + 0.024 * df["KPM"] + 0.016 * df["APM"] - 0.025 * df["DPM"] + 0.0035 * df["ADR"]
 df["Rating"] = df["Rating"].round(2)
 df = df.fillna(0)
+df["ELO"] = df["ELO"].round().astype(int)
 df = df.sort_values('ELO', ascending=False)
 
 global_context = {

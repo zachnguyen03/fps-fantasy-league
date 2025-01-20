@@ -112,7 +112,6 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         df.loc[df["Name"] == player, "TDeaths"] += int(result_2.loc[result_2["Name"] == player]["D"])
         df.loc[df["Name"] == player, "TAssists"] += int(result_2.loc[result_2["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_2.loc[result_2["Name"] == player]["ADR"])
-        df.loc[df["Name"] == player, "ELO"] -= int(elo)
         rating = get_rating(int(result_2.loc[result_2["Name"] == player]["K"])/int(result_2.loc[result_2["Name"] == player]["D"]),
                             int(result_2.loc[result_2["Name"] == player]["K"]),
                             int(result_2.loc[result_2["Name"] == player]["A"]),

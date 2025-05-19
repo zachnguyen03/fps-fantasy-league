@@ -40,6 +40,6 @@ The following installation suppose `python=3.9` `gradio`
 - [x] Create live game + update scoreboard
 - [x] ELO system
 - [x] Save match history
-- [ ] Enhanced ELO system with performance-driven scores
+- [x] Enhanced ELO system with performance-driven scores
 - [ ] OCR integration for automatic scoreboard logging using uploaded screenshot 
-- [ ] Statistical plots
+- [x] Statistical plots

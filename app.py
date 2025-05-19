@@ -38,7 +38,8 @@ def update_database():
     top_1 = gr.Label(f'{df_new.iloc[0]["Name"]} - {df_new.iloc[0]["ELO"]} ELO', label="Top 1")
     top_2 = gr.Label(f'{df_new.iloc[1]["Name"]} - {df_new.iloc[1]["ELO"]} ELO', label="Top 2")
     top_3 = gr.Label(f'{df_new.iloc[2]["Name"]} - {df_new.iloc[2]["ELO"]} ELO', label="Top 3")
-    database = gr.DataFrame(df_new, label="VCT Superserver Season 2")
+    online_df = get_random_players(df_new)
+    database = gr.DataFrame(df_new, label=f"VCT Superserver Season 2 - Current Online Players: {len(online_df)}")
     return database, top_1, top_2, top_3
 
 def init_game(t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5):
@@ -50,18 +51,30 @@ def init_game(t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5):
     df_2 = df.loc[df['Name'].isin(players_2)]
     ELO_1 = df_1["ELO"].sum()
     ELO_2 = df_2["ELO"].sum()
+    map = gr.Textbox(label="Map", value=str(np.random.choice(['Dust2', 'Inferno', 'Mirage', 'Vertigo', 'Anubis', 'Ancient', 'Train', 'Nuke'])), visible=True)
     elo_diff = gr.Number(label="ELO difference", value=ELO_1-ELO_2, visible=True)
     t1_gain = gr.Number(label="Team 1 gain", value=25-min(25, (ELO_1-ELO_2)//50), visible=True)
     t2_gain = gr.Number(label="Team 2 gain", value=25+min(25, (ELO_1-ELO_2)//50), visible=True)
     win_team = gr.Radio(["Team 1", "Team 2"], label="Winning Team", visible=True, interactive=True)
     team_1 = gr.Dataframe(df_1[["Name", "Matches", "Rating", "ELO"]], label="Team 1", interactive=False, visible=True)
     team_2 = gr.Dataframe(df_2[["Name", "Matches", "Rating", "ELO"]], label="Team 2", interactive=False, visible=True)
-    return team_1, team_2, elo_diff, t1_gain, t2_gain, win_team
+    return team_1, team_2, map, elo_diff, t1_gain, t2_gain, win_team
 
 
 def get_rating(kd, kpm, apm, dpm, adr):
     return round(0.65*kd + 0.024*kpm + 0.016*apm - 0.025*dpm + 0.0035*adr,2)
 
+def get_online(df):
+    return df[df["Online"] == 1]
+
+def get_random_players(df):
+    """
+    Randomly select half of the players from the DataFrame.
+    Returns a new DataFrame containing the randomly selected players.
+    """
+    n_players = len(df)
+    n_selected = np.random.randint(10, n_players)
+    return df.sample(n=n_selected)  # random_state for reproducibility
 
 def save_database_csv():
     df.to_csv(global_context["database_path"], index=False)
@@ -93,7 +106,7 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         df.loc[df["Name"] == player, "TAssists"] += int(result_1.loc[result_1["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_1.loc[result_1["Name"] == player]["ADR"])
         df.loc[df["Name"] == player, "MVP"] += int(result_1.loc[result_1["Name"] == player]["MVP"])
-        rating = get_rating(int(result_1.loc[result_1["Name"] == player]["K"])/int(result_1.loc[result_1["Name"] == player]["D"]),
+        rating = get_rating(int(result_1.loc[result_1["Name"] == player]["K"])/(int(result_1.loc[result_1["Name"] == player]["D"])+0.001),
                             int(result_1.loc[result_1["Name"] == player]["K"]),
                             int(result_1.loc[result_1["Name"] == player]["A"]),
                             int(result_1.loc[result_1["Name"] == player]["D"]),
@@ -113,7 +126,7 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         df.loc[df["Name"] == player, "TAssists"] += int(result_2.loc[result_2["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_2.loc[result_2["Name"] == player]["ADR"])
         df.loc[df["Name"] == player, "ELO"] -= int(elo)
-        rating = get_rating(int(result_2.loc[result_2["Name"] == player]["K"])/int(result_2.loc[result_2["Name"] == player]["D"]),
+        rating = get_rating(int(result_2.loc[result_2["Name"] == player]["K"])/(int(result_2.loc[result_2["Name"] == player]["D"])+0.001),
                             int(result_2.loc[result_2["Name"] == player]["K"]),
                             int(result_2.loc[result_2["Name"] == player]["A"]),
                             int(result_2.loc[result_2["Name"] == player]["D"]),
@@ -125,11 +138,43 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         df.loc[df["Name"] == player, "ELO"] -= (int(elo) + max(0, (10 - int(rating * 10))) + int((df.loc[df["Name"] == player, "ELO"] - average_elo) * 0.03))
     database, top_1, top_2, top_3 = update_database()
     return database, top_1, top_2, top_3
+
+def get_init_match():
+    """
+        Season 3 Match Generator logic
+    """
+    n_players = 5
+    team_1 = df.sample(n=n_players, weights=1/(df["Matches"]+0.01))
+    team_2 = df[~df.index.isin(team_1.index)].sample(n=n_players, weights=1/(df[~df.index.isin(team_1.index)]["Matches"]+0.01))
+    df_1 = df.loc[df['Name'].isin(team_1["Name"])]
+    df_2 = df.loc[df['Name'].isin(team_2["Name"])]
+    cmd = generate_command(team_1, team_2)
+    ELO_1 = df_1["ELO"].sum()
+    ELO_2 = df_2["ELO"].sum()
+    map = gr.Textbox(label="Map", value=str(np.random.choice(['Dust2', 'Inferno', 'Mirage', 'Vertigo', 'Anubis', 'Ancient', 'Train', 'Nuke'])), visible=True)
+    elo_diff = gr.Number(label="ELO difference", value=ELO_1-ELO_2, visible=True)
+    t1_gain = gr.Number(label="Team 1 gain", value=25-min(25, (ELO_1-ELO_2)//50), visible=True)
+    t2_gain = gr.Number(label="Team 2 gain", value=25+min(25, (ELO_1-ELO_2)//50), visible=True)
+    win_team = gr.Radio(["Team 1", "Team 2"], label="Winning Team", visible=True, interactive=True)
+    team_1 = gr.Dataframe(df_1[["Name", "Matches", "Rating", "ELO"]], label="Team 1", interactive=False, visible=True)
+    team_2 = gr.Dataframe(df_2[["Name", "Matches", "Rating", "ELO"]], label="Team 2", interactive=False, visible=True)
+    command = gr.Textbox(cmd, label="Command", interactive=True, visible=True)
+    return team_1, team_2, map, elo_diff, t1_gain, t2_gain, win_team, command
+
+def generate_command(team_1, team_2):
+    command = "bot_kick\n"
+    for i in range(5):
+        command += f'bot_add_ct 3 "{team_1.iloc[i]["Name"]}"\n'
+        command += f'bot_add_t 3 "{team_2.iloc[i]["Name"]}"\n'
+    # return gr.Textbox(command, label="Command", interactive=True, visible=True)
+    return command
     
 
 if __name__ == '__main__':
     with gr.Blocks(theme=gr.themes.Soft()) as app:
         df = global_context["database"]
+        online_df = get_random_players(df)
+        print(online_df)
         print(df.columns)
         with gr.Tab("Database"):
             with gr.Row():
@@ -142,7 +187,7 @@ if __name__ == '__main__':
                 top_3 = gr.Label(f'{df.iloc[2]["Name"]} - {df.iloc[2]["ELO"]} ELO', label="Top 3")
             with gr.Row():
                 gr.ScatterPlot(df, x="ELO", y="Rating", title="ELO and Rating distribution", color="Matches", x_lim=[df["ELO"].min()-50, df["ELO"].max()+50], y_lim=[0,2.5])
-            database = gr.DataFrame(df, label="VCT Superserver Season 2")
+            database = gr.DataFrame(df, label=f"VCT Superserver Season 2 - Current Online Players: {len(online_df)}")
         
         save_button.click(save_database_csv, None, None)
         update_button.click(update_database, None, [database, top_1, top_2, top_3])
@@ -153,22 +198,25 @@ if __name__ == '__main__':
                 submit_button = gr.Button(value="Submit", scale=0)
                 save_button = gr.Button(value="Save match", scale=0)
             with gr.Row():
-                gr.Markdown("Team 1")
-                t1p1 = gr.Dropdown(sorted(df["Name"].to_list()), label="P1")
-                t1p2 = gr.Dropdown(sorted(df["Name"].to_list()), label="P2")
-                t1p3 = gr.Dropdown(sorted(df["Name"].to_list()), label="P3")
-                t1p4 = gr.Dropdown(sorted(df["Name"].to_list()), label="P4")
-                t1p5 = gr.Dropdown(sorted(df["Name"].to_list()), label="P5")
-            with gr.Row():
-                gr.Markdown("Team 2")
-                t2p1 = gr.Dropdown(sorted(df["Name"].to_list()), label="P1")
-                t2p2 = gr.Dropdown(sorted(df["Name"].to_list()), label="P2")
-                t2p3 = gr.Dropdown(sorted(df["Name"].to_list()), label="P3")
-                t2p4 = gr.Dropdown(sorted(df["Name"].to_list()), label="P4")
-                t2p5 = gr.Dropdown(sorted(df["Name"].to_list()), label="P5")
+                command = gr.Textbox(label="Command", interactive=True, visible=False)
+            # with gr.Row():
+            #     gr.Markdown("Team 1")
+            #     t1p1 = gr.Dropdown(sorted(df["Name"].to_list()), label="P1")
+            #     t1p2 = gr.Dropdown(sorted(df["Name"].to_list()), label="P2")
+            #     t1p3 = gr.Dropdown(sorted(df["Name"].to_list()), label="P3")
+            #     t1p4 = gr.Dropdown(sorted(df["Name"].to_list()), label="P4")
+            #     t1p5 = gr.Dropdown(sorted(df["Name"].to_list()), label="P5")
+            # with gr.Row():
+            #     gr.Markdown("Team 2")
+            #     t2p1 = gr.Dropdown(sorted(df["Name"].to_list()), label="P1")
+            #     t2p2 = gr.Dropdown(sorted(df["Name"].to_list()), label="P2")
+            #     t2p3 = gr.Dropdown(sorted(df["Name"].to_list()), label="P3")
+            #     t2p4 = gr.Dropdown(sorted(df["Name"].to_list()), label="P4")
+            #     t2p5 = gr.Dropdown(sorted(df["Name"].to_list()), label="P5")
             with gr.Row():
                 team_1 = gr.Dataframe(visible=False, scale=2)
                 with gr.Column():
+                    map = gr.Textbox(label="Map", interactive=True, visible=False)
                     elo_diff = gr.Number(label="ELO difference",
                                           value=None,
                                           interactive=False,
@@ -199,7 +247,8 @@ if __name__ == '__main__':
         with gr.Tab("Statistics"):
             gr.ScatterPlot(df, x="ELO", y="Rating", color="Matches", x_lim=[df["ELO"].min()-50, df["ELO"].max()+50], y_lim=[0,2.5])
             # gr.BarPlot(df, x="Matches", y="Wins", y_aggregate="sum", x_bin=1)
-        create_button.click(init_game, [t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5], [team_1, team_2, elo_diff, t1_gain, t2_gain, win_team])
+        # create_button.click(init_game, [t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5], [team_1, team_2, elo_diff, t1_gain, t2_gain, win_team])
+        create_button.click(get_init_match, None, [team_1, team_2, map, elo_diff, t1_gain, t2_gain, win_team, command])
         submit_button.click(submit_match, [team_1_result, team_2_result, t1_gain, t2_gain, win_team], [database, top_1, top_2, top_3])
         save_button.click(save_match_history, [team_1_result, team_2_result], None)
         

@@ -1,6 +1,8 @@
 import gradio as gr
 import numpy as np
 import json
+from random import sample
+import ast
 
 import pandas as pd
 from utils_app import global_context
@@ -39,8 +41,9 @@ def update_database():
     top_2 = gr.Label(f'{df_new.iloc[1]["Name"]} - {df_new.iloc[1]["ELO"]} ELO', label="Top 2")
     top_3 = gr.Label(f'{df_new.iloc[2]["Name"]} - {df_new.iloc[2]["ELO"]} ELO', label="Top 3")
     online_df = get_random_players(df_new)
+    online_list = gr.Textbox(value=online_df["Name"].to_list(), label="Online Players", interactive=True)
     database = gr.DataFrame(df_new, label=f"VCT Superserver Season 2 - Current Online Players: {len(online_df)}")
-    return database, top_1, top_2, top_3
+    return database, top_1, top_2, top_3, online_list
 
 def init_game(t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5):
     players_1 = [t1p1, t1p2, t1p3, t1p4, t1p5]
@@ -74,7 +77,7 @@ def get_random_players(df):
     """
     n_players = len(df)
     n_selected = np.random.randint(10, n_players)
-    return df.sample(n=n_selected)  # random_state for reproducibility
+    return df.sample(n=n_selected, weights=1/(df["Matches"]+0.01)) 
 
 def save_database_csv():
     df.to_csv(global_context["database_path"], index=False)
@@ -125,7 +128,7 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         df.loc[df["Name"] == player, "TDeaths"] += int(result_2.loc[result_2["Name"] == player]["D"])
         df.loc[df["Name"] == player, "TAssists"] += int(result_2.loc[result_2["Name"] == player]["A"])
         df.loc[df["Name"] == player, "TADR"] += int(result_2.loc[result_2["Name"] == player]["ADR"])
-        df.loc[df["Name"] == player, "ELO"] -= int(elo)
+        # df.loc[df["Name"] == player, "ELO"] -= int(elo)
         rating = get_rating(int(result_2.loc[result_2["Name"] == player]["K"])/(int(result_2.loc[result_2["Name"] == player]["D"])+0.001),
                             int(result_2.loc[result_2["Name"] == player]["K"]),
                             int(result_2.loc[result_2["Name"] == player]["A"]),
@@ -136,18 +139,26 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         print(f"ELO coeff: ", int((df.loc[df["Name"] == player, "ELO"] - average_elo) * 0.05))
         print("ELO gain/loss: ", (int(elo) + max(0, (10 - int(rating * 10))) + int((df.loc[df["Name"] == player, "ELO"] - average_elo) * 0.03)))
         df.loc[df["Name"] == player, "ELO"] -= (int(elo) + max(0, (10 - int(rating * 10))) + int((df.loc[df["Name"] == player, "ELO"] - average_elo) * 0.03))
-    database, top_1, top_2, top_3 = update_database()
-    return database, top_1, top_2, top_3
+    database, top_1, top_2, top_3, online_list = update_database()
+    return database, top_1, top_2, top_3, online_list
 
-def get_init_match():
+def get_init_match(online_list, database):
     """
         Season 3 Match Generator logic
     """
     n_players = 5
-    team_1 = df.sample(n=n_players, weights=1/(df["Matches"]+0.01))
-    team_2 = df[~df.index.isin(team_1.index)].sample(n=n_players, weights=1/(df[~df.index.isin(team_1.index)]["Matches"]+0.01))
-    df_1 = df.loc[df['Name'].isin(team_1["Name"])]
-    df_2 = df.loc[df['Name'].isin(team_2["Name"])]
+    # team_1 = online_df.sample(n=n_players, weights=1/(online_df["Matches"]+0.01))
+    # team_2 = online_df[~online_df.index.isin(team_1.index)].sample(n=n_players, weights=1/(online_df[~online_df.index.isin(team_1.index)]["Matches"]+0.01))
+    # team_1 = sample(online_df["Name"].to_list(), n_players)
+    # team_2 = [player for player in online_df["Name"].to_list() if player not in team_1]
+    print(ast.literal_eval(online_list))
+    online = ast.literal_eval(online_list)
+    team_1 = sample(online, n_players)
+    team_2 = sample([player for player in online if player not in team_1], n_players)
+    print("Team 1: ", team_1)
+    print("Team 2: ", team_2)
+    df_1 = database.loc[database['Name'].isin(team_1)]
+    df_2 = database.loc[database['Name'].isin(team_2)]
     cmd = generate_command(team_1, team_2)
     ELO_1 = df_1["ELO"].sum()
     ELO_2 = df_2["ELO"].sum()
@@ -164,8 +175,8 @@ def get_init_match():
 def generate_command(team_1, team_2):
     command = "bot_kick\n"
     for i in range(5):
-        command += f'bot_add_ct 3 "{team_1.iloc[i]["Name"]}"\n'
-        command += f'bot_add_t 3 "{team_2.iloc[i]["Name"]}"\n'
+        command += f'bot_add_ct 3 "{team_1[i]}"\n'
+        command += f'bot_add_t 3 "{team_2[i]}"\n'
     # return gr.Textbox(command, label="Command", interactive=True, visible=True)
     return command
     
@@ -173,7 +184,8 @@ def generate_command(team_1, team_2):
 if __name__ == '__main__':
     with gr.Blocks(theme=gr.themes.Soft()) as app:
         df = global_context["database"]
-        online_df = get_random_players(df)
+        # online_df = get_random_players(df)
+        online_df = global_context["online_df"]
         print(online_df)
         print(df.columns)
         with gr.Tab("Database"):
@@ -187,10 +199,12 @@ if __name__ == '__main__':
                 top_3 = gr.Label(f'{df.iloc[2]["Name"]} - {df.iloc[2]["ELO"]} ELO', label="Top 3")
             with gr.Row():
                 gr.ScatterPlot(df, x="ELO", y="Rating", title="ELO and Rating distribution", color="Matches", x_lim=[df["ELO"].min()-50, df["ELO"].max()+50], y_lim=[0,2.5])
+            with gr.Row():
+                online_list = gr.Textbox(value=online_df["Name"].to_list(), label="Online Players", interactive=True)
             database = gr.DataFrame(df, label=f"VCT Superserver Season 2 - Current Online Players: {len(online_df)}")
         
         save_button.click(save_database_csv, None, None)
-        update_button.click(update_database, None, [database, top_1, top_2, top_3])
+        update_button.click(update_database, None, [database, top_1, top_2, top_3, online_list])
 
         with gr.Tab("Live game"):
             with gr.Row():
@@ -248,7 +262,7 @@ if __name__ == '__main__':
             gr.ScatterPlot(df, x="ELO", y="Rating", color="Matches", x_lim=[df["ELO"].min()-50, df["ELO"].max()+50], y_lim=[0,2.5])
             # gr.BarPlot(df, x="Matches", y="Wins", y_aggregate="sum", x_bin=1)
         # create_button.click(init_game, [t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5], [team_1, team_2, elo_diff, t1_gain, t2_gain, win_team])
-        create_button.click(get_init_match, None, [team_1, team_2, map, elo_diff, t1_gain, t2_gain, win_team, command])
+        create_button.click(get_init_match, [online_list, database], [team_1, team_2, map, elo_diff, t1_gain, t2_gain, win_team, command])
         submit_button.click(submit_match, [team_1_result, team_2_result, t1_gain, t2_gain, win_team], [database, top_1, top_2, top_3])
         save_button.click(save_match_history, [team_1_result, team_2_result], None)
         

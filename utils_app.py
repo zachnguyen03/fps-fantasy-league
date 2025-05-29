@@ -11,7 +11,7 @@ def get_random_players(df):
     Returns a new DataFrame containing the randomly selected players.
     """
     n_players = len(df)
-    n_selected = np.random.randint(10, n_players)
+    n_selected = np.random.randint(10, n_players//2)
     return df.sample(n=n_selected, weights=1/(df["Matches"]+0.01))  # random_state for reproducibility
 
 # Postprocess stats
@@ -22,7 +22,7 @@ df["DPM"] = (df["TDeaths"] / df["Matches"]).round(2)
 df["APM"] = (df["TAssists"] / df["Matches"]).round(2)
 df["K/D"] = (df["TKills"] / df["TDeaths"]).round(2)
 df["ADR"] = (df["TADR"] / df["Matches"]).round(2)
-df["Rating"] = 0.65 * df["K/D"] + 0.024 * df["KPM"] + 0.016 * df["APM"] - 0.025 * df["DPM"] + 0.0035 * df["ADR"]
+df["Rating"] = 0.28 * df["K/D"] + 0.02 * df["KPM"] + 0.006 * df["APM"] + 0.0058 * df["ADR"]
 df["Rating"] = df["Rating"].round(2)
 df = df.fillna(0)
 df["ELO"] = df["ELO"].round().astype(int)

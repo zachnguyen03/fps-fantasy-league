@@ -18,7 +18,7 @@ def init_database(df):
     df["APM"] = (df["TAssists"] / df["Matches"]).round(2)
     df["K/D"] = (df["TKills"] / df["TDeaths"]).round(2)
     df["ADR"] = (df["TADR"] / df["Matches"]).round(2)
-    df["Rating"] = 0.65 * df["K/D"] + 0.024 * df["KPM"] + 0.016 * df["APM"] - 0.025 * df["DPM"] + 0.0035 * df["ADR"]
+    df["Rating"] = 0.28 * df["K/D"] + 0.02 * df["KPM"] + 0.006 * df["APM"] + 0.0058 * df["ADR"]
     df["Rating"] = df["Rating"].round(2)
     df = df.fillna(0)
     df.sort_values('Rating', ascending=False)
@@ -32,7 +32,7 @@ def update_database():
     df_new["APM"] = (df["TAssists"] / df["Matches"]).round(2)
     df_new["K/D"] = (df["TKills"] / df["TDeaths"]).round(2)
     df_new["ADR"] = (df["TADR"] / df["Matches"]).round(2)
-    df_new["Rating"] = (0.65 * df_new["K/D"] + 0.024 * df_new["KPM"] + 0.016 * df_new["APM"] - 0.025 * df_new["DPM"] + 0.0035 * df_new["ADR"]).round(2)
+    df_new["Rating"] = (0.28 * df_new["K/D"] + 0.02 * df_new["KPM"] + 0.006 * df_new["APM"] + 0.0058 * df_new["ADR"]).round(2)
     # df_new = df_new.round(2)
     df_new = df_new.fillna(0)
     df_new = df_new.sort_values('ELO', ascending=False)
@@ -42,7 +42,7 @@ def update_database():
     top_3 = gr.Label(f'{df_new.iloc[2]["Name"]} - {df_new.iloc[2]["ELO"]} ELO', label="Top 3")
     online_df = get_random_players(df_new)
     online_list = gr.Textbox(value=online_df["Name"].to_list(), label="Online Players", interactive=True)
-    database = gr.DataFrame(df_new, label=f"VCT Superserver Season 2 - Current Online Players: {len(online_df)}")
+    database = gr.DataFrame(df_new, label=f"VCT Superserver Season 3 - Current Online Players: {len(online_df)}")
     return database, top_1, top_2, top_3, online_list
 
 def init_game(t1p1, t1p2, t1p3, t1p4, t1p5, t2p1, t2p2, t2p3, t2p4, t2p5):
@@ -76,10 +76,10 @@ def get_random_players(df):
     Returns a new DataFrame containing the randomly selected players.
     """
     n_players = len(df)
-    n_selected = np.random.randint(10, n_players)
+    n_selected = np.random.randint(10, n_players//2)
     return df.sample(n=n_selected, weights=1/(df["Matches"]+0.01)) 
 
-def save_database_csv():
+def save_database_csv(df):
     df.to_csv(global_context["database_path"], index=False)
     return True
 
@@ -139,7 +139,7 @@ def submit_match(result_1, result_2, t1_gain, t2_gain, win_team):
         print(f"ELO coeff: ", int((df.loc[df["Name"] == player, "ELO"] - average_elo) * 0.05))
         print("ELO gain/loss: ", (int(elo) + max(0, (10 - int(rating * 10))) + int((df.loc[df["Name"] == player, "ELO"] - average_elo) * 0.03)))
         df.loc[df["Name"] == player, "ELO"] -= (int(elo) + max(0, (10 - int(rating * 10))) + int((df.loc[df["Name"] == player, "ELO"] - average_elo) * 0.03))
-    database, top_1, top_2, top_3, online_list = update_database()
+    database, top_1, top_2, top_3, _ = update_database()
     return database, top_1, top_2, top_3, online_list
 
 def get_init_match(online_list, database):
@@ -190,7 +190,7 @@ if __name__ == '__main__':
         print(df.columns)
         with gr.Tab("Database"):
             with gr.Row():
-                gr.Markdown("Welcome to Valo:GO Fantasy League - Season 1")
+                gr.Markdown("Welcome to Valo:GO Fantasy League - Season 3")
                 update_button = gr.Button(value="Update", scale=0)
                 save_button = gr.Button(value="Save Database", scale=0)
             with gr.Row():
@@ -198,12 +198,12 @@ if __name__ == '__main__':
                 top_2 = gr.Label(f'{df.iloc[1]["Name"]} - {df.iloc[1]["ELO"]} ELO', label="Top 2")
                 top_3 = gr.Label(f'{df.iloc[2]["Name"]} - {df.iloc[2]["ELO"]} ELO', label="Top 3")
             with gr.Row():
-                gr.ScatterPlot(df, x="ELO", y="Rating", title="ELO and Rating distribution", color="Matches", x_lim=[df["ELO"].min()-50, df["ELO"].max()+50], y_lim=[0,2.5])
+                elo_plot =gr.ScatterPlot(df, x="ELO", y="Rating", title="ELO and Rating distribution", color="Matches", x_lim=[df["ELO"].min()-50, df["ELO"].max()+50], y_lim=[0,2.5])
             with gr.Row():
                 online_list = gr.Textbox(value=online_df["Name"].to_list(), label="Online Players", interactive=True)
             database = gr.DataFrame(df, label=f"VCT Superserver Season 2 - Current Online Players: {len(online_df)}")
         
-        save_button.click(save_database_csv, None, None)
+        save_button.click(save_database_csv, [database], None)
         update_button.click(update_database, None, [database, top_1, top_2, top_3, online_list])
 
         with gr.Tab("Live game"):

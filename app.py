@@ -9,6 +9,17 @@ from utils_app import global_context
 
 import os
 
+# Load custom CSS
+def load_css():
+    try:
+        with open('styles.css', 'r') as f:
+            return f.read()
+    except FileNotFoundError:
+        print("Warning: styles.css not found. Using default styling.")
+        return ""
+
+custom_css = load_css()
+
 
 def init_database(df):
     df = df.round(2)
@@ -182,7 +193,7 @@ def generate_command(team_1, team_2):
     
 
 if __name__ == '__main__':
-    with gr.Blocks(theme=gr.themes.Soft()) as app:
+    with gr.Blocks(theme=gr.themes.Soft(), css=custom_css) as app:
         df = global_context["database"]
         # online_df = get_random_players(df)
         online_df = global_context["online_df"]

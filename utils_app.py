@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-csv_path = './database_update_ss3.csv'
+csv_path = './vct_ss4.csv'
 # csv_path = './data/sample.csv'
 df = pd.read_csv(csv_path)
 
@@ -12,7 +12,8 @@ def get_random_players(df):
     """
     n_players = len(df)
     n_selected = np.random.randint(10, n_players//2)
-    return df.sample(n=n_selected, weights=1/(df["Matches"]+0.01))  # random_state for reproducibility
+    # return df.sample(n=n_selected, weights=1/(df["Matches"]+0.01))  # random_state for reproducibility
+    return df.sample(n=n_selected)
 
 # Postprocess stats
 df = df.round(2)

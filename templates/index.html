@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VCT Simulator - Valo:GO Fantasy League</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎮 VCT Simulator</h1>
+            <p class="subtitle">Valo:GO Fantasy League - Season 4</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button type="button" class="tab-btn active" data-tab="database">Database</button>
+            <button type="button" class="tab-btn" data-tab="game">Live Game</button>
+            <button type="button" class="tab-btn" data-tab="stats">Statistics</button>
+        </div>
+
+        <!-- Database Tab -->
+        <div id="database-tab" class="tab-content active">
+            <div class="top-bar">
+                <div class="top-3">
+                    <div class="top-player top-1">
+                        <div class="top-player-rank">
+                            <span class="rank-badge">#1</span>
+                            {% if top_3[0].rank_icon %}
+                            <img id="top-1-icon" src="{{ top_3[0].rank_icon }}" alt="rank" class="top-rank-icon">
+                            {% else %}
+                            <img id="top-1-icon" src="" alt="rank" class="top-rank-icon" style="display: none;">
+                            {% endif %}
+                        </div>
+                        <div class="top-player-info">
+                            <span id="top-1-name" class="top-player-name">{{ top_3[0]['Name'] }}</span>
+                            <span class="elo">{{ top_3[0]['ELO'] }} ELO</span>
+                        </div>
+                    </div>
+                    <div class="top-player top-2">
+                        <div class="top-player-rank">
+                            <span class="rank-badge">#2</span>
+                            {% if top_3[1].rank_icon %}
+                            <img id="top-2-icon" src="{{ top_3[1].rank_icon }}" alt="rank" class="top-rank-icon">
+                            {% else %}
+                            <img id="top-2-icon" src="" alt="rank" class="top-rank-icon" style="display: none;">
+                            {% endif %}
+                        </div>
+                        <div class="top-player-info">
+                            <span id="top-2-name" class="top-player-name">{{ top_3[1]['Name'] }}</span>
+                            <span class="elo">{{ top_3[1]['ELO'] }} ELO</span>
+                        </div>
+                    </div>
+                    <div class="top-player top-3">
+                        <div class="top-player-rank">
+                            <span class="rank-badge">#3</span>
+                            {% if top_3[2].rank_icon %}
+                            <img id="top-3-icon" src="{{ top_3[2].rank_icon }}" alt="rank" class="top-rank-icon">
+                            {% else %}
+                            <img id="top-3-icon" src="" alt="rank" class="top-rank-icon" style="display: none;">
+                            {% endif %}
+                        </div>
+                        <div class="top-player-info">
+                            <span id="top-3-name" class="top-player-name">{{ top_3[2]['Name'] }}</span>
+                            <span class="elo">{{ top_3[2]['ELO'] }} ELO</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="database-table-container">
+                <table class="database-table" id="database-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>ELO</th>
+                            <th>Rating</th>
+                            <th>Matches</th>
+                            <th>Wins</th>
+                            <th>Losses</th>
+                            <th>K/D</th>
+                            <th>KPM</th>
+                            <th>DPM</th>
+                            <th>APM</th>
+                            <th>ADR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="database-tbody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Live Game Tab -->
+        <div id="game-tab" class="tab-content">
+            <div class="game-controls">
+                <button type="button" class="btn btn-primary" id="create-game-btn">Create Game</button>
+                <button type="button" class="btn btn-success" id="submit-match-btn" disabled>Submit Match</button>
+                <button type="button" class="btn btn-secondary" id="save-match-btn" disabled>Save Match</button>
+            </div>
+
+            <div class="screenshot-upload" id="screenshot-upload" style="display: none;">
+                <div class="upload-box">
+                    <label for="screenshot-file" class="upload-label">
+                        <span class="upload-icon">📷</span>
+                        <span>Upload Match Screenshot</span>
+                        <input type="file" id="screenshot-file" accept="image/*" style="display: none;">
+                    </label>
+                    <button type="button" class="btn btn-secondary" id="process-screenshot-btn" disabled>Process Match</button>
+                </div>
+                <div id="ocr-status" class="ocr-status"></div>
+            </div>
+
+            <div class="command-box" id="command-box" style="display: none;">
+                <label>Command:</label>
+                <textarea id="command-text" readonly></textarea>
+            </div>
+
+            <div class="match-setup" id="match-setup" style="display: none;">
+                <div class="teams-container">
+                    <div class="team-box team-left">
+                        <h3>Team 1</h3>
+                        <div class="players-cards" id="team-1-cards">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="match-center">
+                        <div class="match-info">
+                            <div class="info-item">
+                                <label>Map</label>
+                                <span id="map-name" class="info-value">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>ELO Diff</label>
+                                <span id="elo-diff" class="info-value">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>T1 Gain</label>
+                                <span id="t1-gain" class="info-value">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>T2 Gain</label>
+                                <span id="t2-gain" class="info-value">-</span>
+                            </div>
+                        </div>
+                        <div class="win-selector">
+                            <label>Winning Team</label>
+                            <select id="win-team">
+                                <option value="Team 1">Team 1</option>
+                                <option value="Team 2">Team 2</option>
+                            </select>
+                        </div>
+                        <div class="match-score">
+                            <label>Match Score</label>
+                            <div class="score-inputs">
+                                <div class="score-item">
+                                    <label>Team 1</label>
+                                    <input type="number" id="team1-score" min="0" max="30" value="16" required>
+                                </div>
+                                <span class="score-separator">-</span>
+                                <div class="score-item">
+                                    <label>Team 2</label>
+                                    <input type="number" id="team2-score" min="0" max="30" value="14" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="team-box team-right">
+                        <h3>Team 2</h3>
+                        <div class="players-cards" id="team-2-cards">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-container" id="results-container" style="display: none;">
+                    <div class="result-box">
+                        <h3>Winning Team</h3>
+                        <table class="result-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>K</th>
+                                    <th>D</th>
+                                    <th>A</th>
+                                    <th>ADR</th>
+                                    <th>MVP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="result-1-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="result-box">
+                        <h3>Losing Team</h3>
+                        <table class="result-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>K</th>
+                                    <th>D</th>
+                                    <th>A</th>
+                                    <th>ADR</th>
+                                    <th>MVP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="result-2-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div id="stats-tab" class="tab-content">
+            <!-- Statistics Sub-tabs -->
+            <div class="stats-subtabs">
+                <button type="button" class="stats-subtab-btn active" data-subtab="player-stats">Player Stats</button>
+                <button type="button" class="stats-subtab-btn" data-subtab="map-stats">Map Stats</button>
+            </div>
+
+            <!-- Player Stats Sub-tab -->
+            <div id="player-stats-subtab" class="stats-subtab-content active">
+                <div class="player-search-section">
+                    <div class="search-box">
+                        <label for="player-search">Search Player:</label>
+                        <input type="text" id="player-search" list="player-list" placeholder="Type player name...">
+                        <datalist id="player-list">
+                            <!-- Populated by JavaScript -->
+                        </datalist>
+                        <button type="button" class="btn btn-primary" id="search-player-btn">Search</button>
+                    </div>
+                </div>
+
+                <div id="player-stats-container" class="player-stats-container" style="display: none;">
+                <div class="player-header">
+                    <div class="player-header-left">
+                        <img id="player-rank-icon" src="" alt="rank" class="player-rank-icon-large">
+                        <div class="player-header-info">
+                            <h2 id="player-name">Player Name</h2>
+                            <div class="player-header-stats">
+                                <span class="stat-badge elo-badge" id="player-elo">1000 ELO</span>
+                                <span class="stat-badge matches-badge" id="player-matches">0 Matches</span>
+                                <span class="stat-badge winrate-badge" id="player-winrate">0% WR</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="elo-graph-section">
+                    <h3>ELO History</h3>
+                    <div id="elo-graph-container" class="elo-graph-container">
+                        <canvas id="elo-graph"></canvas>
+                    </div>
+                    <!-- <p class="graph-note">Note: Historical ELO tracking will be available in future updates</p> -->
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stats-card">
+                        <h3>Overview</h3>
+                        <div class="stats-grid-mini">
+                            <div class="stat-item">
+                                <label>Wins</label>
+                                <span id="stat-wins">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>Losses</label>
+                                <span id="stat-losses">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>K/D</label>
+                                <span id="stat-kd">0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>Rating</label>
+                                <span id="stat-rating">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <h3>Per Round</h3>
+                        <div class="stats-grid-mini">
+                            <div class="stat-item">
+                                <label>KPR</label>
+                                <span id="stat-kpr">0.000</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>DPR</label>
+                                <span id="stat-dpr">0.000</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>APR</label>
+                                <span id="stat-apr">0.000</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>ADR</label>
+                                <span id="stat-adr">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <h3>Per Match</h3>
+                        <div class="stats-grid-mini">
+                            <div class="stat-item">
+                                <label>KPM</label>
+                                <span id="stat-kpm">0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>DPM</label>
+                                <span id="stat-dpm">0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>APM</label>
+                                <span id="stat-apm">0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>MVP</label>
+                                <span id="stat-mvp">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <h3>Totals</h3>
+                        <div class="stats-grid-mini">
+                            <div class="stat-item">
+                                <label>Kills</label>
+                                <span id="stat-total-kills">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>Deaths</label>
+                                <span id="stat-total-deaths">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>Assists</label>
+                                <span id="stat-total-assists">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>ELO</label>
+                                <span id="stat-current-elo">1000</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+
+                <div class="match-history-section">
+                    <h3>Match History</h3>
+                    <div id="match-history-cards" class="match-history-cards">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div id="no-matches-message" class="no-matches-message" style="display: none;">
+                        <p>No stats available</p>
+                        <p class="subtext">This player has not played any matches yet.</p>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- Map Stats Sub-tab -->
+            <div id="map-stats-subtab" class="stats-subtab-content">
+                <div class="map-stats-container">
+                    <div id="map-stats-cards" class="map-stats-cards">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div id="no-maps-message" class="no-maps-message" style="display: none;">
+                        <p>No map statistics available</p>
+                        <p class="subtext">Maps will appear here after matches are played.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+

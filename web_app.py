@@ -683,6 +683,41 @@ def update_online_players():
         "online_players": online_df["Name"].tolist()
     })
 
+@app.route('/api/map-stats')
+def get_map_stats():
+    """Get statistics for all maps"""
+    try:
+        maps_df = db.get_all_maps()
+        maps_list = []
+        
+        for _, row in maps_df.iterrows():
+            map_name = row['map_name']
+            num_games = int(row['num_games'])
+            total_rounds = int(row['total_rounds'])
+            avg_rounds = round(total_rounds / num_games, 2) if num_games > 0 else 0.0
+            
+            maps_list.append({
+                "map_name": map_name,
+                "num_games": num_games,
+                "total_rounds": total_rounds,
+                "avg_rounds": avg_rounds
+            })
+        
+        # Sort by number of games (most played first)
+        maps_list.sort(key=lambda x: x['num_games'], reverse=True)
+        
+        return jsonify({
+            "success": True,
+            "maps": maps_list
+        })
+    except Exception as e:
+        print(f"Error getting map stats: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "maps": []
+        })
+
 @app.route('/api/player-stats/<player_name>')
 def get_player_stats(player_name):
     """Get detailed stats for a specific player"""

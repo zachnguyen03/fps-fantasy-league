@@ -95,12 +95,14 @@ global_context = {
 
 def get_rank(elo):
     """Determine rank based on ELO"""
-    if elo < 1000:
+    if elo < 900:
         return "silver"
-    elif elo < 1100:
+    if elo <= 1000:
         return "gold"
-    elif elo < 1300:
+    elif elo < 1100:
         return "diamond"
+    elif elo < 1300:
+        return "elite"
     elif elo < 1500:
         return "gosu"
     else:
@@ -127,6 +129,40 @@ def get_random_players(df):
 
 def get_rating(kd, kpm, apm, dpm, adr):
     return round(0.65*kd + 0.024*kpm + 0.016*apm - 0.025*dpm + 0.0035*adr, 2)
+
+def refresh_database_from_db():
+    """Refresh global database context from actual database - ensures deleted players are removed"""
+    df_current = db.get_all_players()
+    
+    # Update global context with fresh data
+    df_current = df_current.round(2)
+    df_current["Matches"] = df_current["Wins"] + df_current["Losses"]
+    # Handle division by zero
+    df_current["KPM"] = (df_current["TKills"] / df_current["Matches"].replace(0, 1)).round(2)
+    df_current["DPM"] = (df_current["TDeaths"] / df_current["Matches"].replace(0, 1)).round(2)
+    df_current["APM"] = (df_current["TAssists"] / df_current["Matches"].replace(0, 1)).round(2)
+    df_current["K/D"] = (df_current["TKills"] / df_current["TDeaths"].replace(0, 1)).round(2)
+    df_current["ADR"] = (df_current["TADR"] / df_current["Matches"].replace(0, 1)).round(2)
+    df_current["Rating"] = 0.28 * df_current["K/D"] + 0.02 * df_current["KPM"] + 0.006 * df_current["APM"] + 0.0058 * df_current["ADR"]
+    df_current["Rating"] = df_current["Rating"].round(2)
+    
+    # Ensure new columns exist
+    if "KPR" not in df_current.columns:
+        df_current["KPR"] = 0.0
+    if "DPR" not in df_current.columns:
+        df_current["DPR"] = 0.0
+    if "APR" not in df_current.columns:
+        df_current["APR"] = 0.0
+    if "MatchHistory" not in df_current.columns:
+        df_current["MatchHistory"] = ""
+    
+    df_current = df_current.fillna(0)
+    df_current["ELO"] = df_current["ELO"].round().astype(int)
+    df_current = df_current.sort_values('ELO', ascending=False)
+    
+    # Update global context
+    global_context["database"] = df_current
+    return df_current
 
 def update_database_stats():
     """Update database statistics"""
@@ -160,7 +196,8 @@ def update_database_stats():
 @app.route('/', methods=['GET'])
 def index():
     """Main page"""
-    df_current = global_context["database"]
+    # Always fetch fresh data from database to ensure deleted players are not shown
+    df_current = refresh_database_from_db()
     online_df = get_random_players(df_current)
     top_3 = df_current.head(3)
     
@@ -260,7 +297,8 @@ def reset_database():
 
 def calculate_streak(player_name):
     """Calculate current win/lose streak for a player"""
-    df_current = global_context["database"]
+    # Always fetch fresh data from database
+    df_current = refresh_database_from_db()
     player_data = df_current[df_current["Name"] == player_name]
     
     if player_data.empty:
@@ -343,8 +381,9 @@ def calculate_streak(player_name):
 
 @app.route('/api/database')
 def get_database():
-    """Get all players from database"""
-    df_current = global_context["database"]
+    """Get all players from database - always fetch fresh from database"""
+    # Always fetch fresh data from database to ensure deleted players are not shown
+    df_current = refresh_database_from_db()
     
     # Get current online players
     online_df = get_random_players(df_current)
@@ -363,9 +402,9 @@ def get_database():
             "wins": int(row["Wins"]),
             "losses": int(row["Losses"]),
             "kd": round(row["K/D"], 2),
-            "kpm": round(row["KPM"], 2),
-            "dpm": round(row["DPM"], 2),
-            "apm": round(row["APM"], 2),
+            "kpr": round(row.get("KPR", 0.0), 3),
+            "dpr": round(row.get("DPR", 0.0), 3),
+            "apr": round(row.get("APR", 0.0), 3),
             "adr": round(row["ADR"], 2),
             "rank": rank,
             "rank_icon": icon_data,
@@ -373,6 +412,31 @@ def get_database():
             "streak_count": streak["count"],
             "is_online": row["Name"] in online_players_set
         })
+    
+    # Identify top 3 players for each stat with their ranks
+    players_sorted_rating = sorted(players, key=lambda x: x['rating'], reverse=True)
+    players_sorted_kd = sorted(players, key=lambda x: x['kd'], reverse=True)
+    players_sorted_kpr = sorted(players, key=lambda x: x['kpr'], reverse=True)
+    players_sorted_dpr = sorted(players, key=lambda x: x['dpr'], reverse=False)  # Lower is better for DPR
+    players_sorted_apr = sorted(players, key=lambda x: x['apr'], reverse=True)
+    players_sorted_adr = sorted(players, key=lambda x: x['adr'], reverse=True)
+    
+    # Create dictionaries mapping player names to their rank (1, 2, 3) for each stat
+    top3_rating_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_rating[:3])}
+    top3_kd_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_kd[:3])}
+    top3_kpr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_kpr[:3])}
+    top3_dpr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_dpr[:3])}  # Lower DPR is better
+    top3_apr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_apr[:3])}
+    top3_adr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_adr[:3])}
+    
+    # Add top 3 rank to each player (0 means not in top 3)
+    for player in players:
+        player['top3_rating_rank'] = top3_rating_ranks.get(player['name'], 0)
+        player['top3_kd_rank'] = top3_kd_ranks.get(player['name'], 0)
+        player['top3_kpr_rank'] = top3_kpr_ranks.get(player['name'], 0)
+        player['top3_dpr_rank'] = top3_dpr_ranks.get(player['name'], 0)
+        player['top3_apr_rank'] = top3_apr_ranks.get(player['name'], 0)
+        player['top3_adr_rank'] = top3_adr_ranks.get(player['name'], 0)
     return jsonify(players)
 
 @app.route('/api/create-match', methods=['POST'])
@@ -662,6 +726,9 @@ def submit_match():
 @app.route('/api/update-online-players', methods=['GET'])
 def update_online_players():
     """Update online players list and top 3 - called automatically every hour"""
+    # Refresh from database first to get latest players
+    df_updated = refresh_database_from_db()
+    # Then update stats
     df_updated = update_database_stats()
     online_df = get_random_players(df_updated)
     top_3 = df_updated.head(3)
@@ -721,7 +788,8 @@ def get_map_stats():
 @app.route('/api/player-stats/<player_name>')
 def get_player_stats(player_name):
     """Get detailed stats for a specific player"""
-    df_current = global_context["database"]
+    # Always fetch fresh data from database
+    df_current = refresh_database_from_db()
     
     # Find player
     player_data = df_current[df_current["Name"] == player_name]

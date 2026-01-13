@@ -924,6 +924,22 @@ h1, h2, h3 {
     font-weight: 600;
 }
 
+.database-table .number-cell.top3-stat {
+    font-weight: 700;
+}
+
+.database-table .number-cell.top3-stat.rank-1 {
+    color: #ffd700;
+}
+
+.database-table .number-cell.top3-stat.rank-2 {
+    color: #c0c0c0;
+}
+
+.database-table .number-cell.top3-stat.rank-3 {
+    color: #cd7f32;
+}
+
 /* Game Controls */
 .game-controls {
     display: flex;

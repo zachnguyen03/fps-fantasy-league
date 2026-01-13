@@ -82,6 +82,14 @@ function renderDatabaseTable(players) {
             row.classList.add(`rank-${index + 1}`);
         }
         
+        // Add top 3 highlighting classes for stats (rank 1, 2, or 3)
+        const ratingClass = player.top3_rating_rank > 0 ? `top3-stat rank-${player.top3_rating_rank}` : '';
+        const kdClass = player.top3_kd_rank > 0 ? `top3-stat rank-${player.top3_kd_rank}` : '';
+        const kprClass = player.top3_kpr_rank > 0 ? `top3-stat rank-${player.top3_kpr_rank}` : '';
+        const dprClass = player.top3_dpr_rank > 0 ? `top3-stat rank-${player.top3_dpr_rank}` : '';
+        const aprClass = player.top3_apr_rank > 0 ? `top3-stat rank-${player.top3_apr_rank}` : '';
+        const adrClass = player.top3_adr_rank > 0 ? `top3-stat rank-${player.top3_adr_rank}` : '';
+        
         // Add online indicator
         const onlineIndicator = player.is_online ? '<span class="online-indicator" title="Online"></span>' : '';
         
@@ -93,15 +101,15 @@ function renderDatabaseTable(players) {
                 ${streakDisplay ? `<span class="streak-badge">${streakDisplay}</span>` : ''}
             </td>
             <td class="number-cell elo-cell">${player.elo}</td>
-            <td class="number-cell">${player.rating}</td>
+            <td class="number-cell ${ratingClass}">${player.rating}</td>
             <td class="number-cell">${player.matches}</td>
             <td class="number-cell win-cell">${player.wins}</td>
             <td class="number-cell loss-cell">${player.losses}</td>
-            <td class="number-cell">${player.kd}</td>
-            <td class="number-cell">${player.kpm}</td>
-            <td class="number-cell">${player.dpm}</td>
-            <td class="number-cell">${player.apm}</td>
-            <td class="number-cell">${player.adr}</td>
+            <td class="number-cell ${kdClass}">${player.kd}</td>
+            <td class="number-cell ${kprClass}">${player.kpr || '0.000'}</td>
+            <td class="number-cell ${dprClass}">${player.dpr || '0.000'}</td>
+            <td class="number-cell ${aprClass}">${player.apr || '0.000'}</td>
+            <td class="number-cell ${adrClass}">${player.adr}</td>
         `;
         tbody.appendChild(row);
     });

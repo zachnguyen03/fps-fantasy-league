@@ -229,6 +229,7 @@
             <div class="stats-subtabs">
                 <button type="button" class="stats-subtab-btn active" data-subtab="player-stats">Player Stats</button>
                 <button type="button" class="stats-subtab-btn" data-subtab="map-stats">Map Stats</button>
+                <button type="button" class="stats-subtab-btn" data-subtab="match-history">Match History</button>
             </div>
 
             <!-- Player Stats Sub-tab -->
@@ -383,6 +384,33 @@
                         <p class="subtext">Maps will appear here after matches are played.</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Match History Sub-tab -->
+            <div id="match-history-subtab" class="stats-subtab-content">
+                <div class="match-history-container">
+                    <div id="all-match-history-cards" class="match-history-cards">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div id="no-all-matches-message" class="no-matches-message" style="display: none;">
+                        <p>No matches available</p>
+                        <p class="subtext">No matches have been recorded yet.</p>
+                    </div>
+                    <div id="match-pagination" class="match-pagination" style="display: none;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Details Modal (Faceit Style) -->
+    <div id="match-details-modal" class="match-modal">
+        <div class="match-modal-overlay"></div>
+        <div class="match-modal-content">
+            <button class="match-modal-close" id="match-modal-close">&times;</button>
+            <div id="match-details-content">
+                <!-- Populated by JavaScript -->
             </div>
         </div>
     </div>

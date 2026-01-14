@@ -41,6 +41,11 @@ function initTabs() {
                 if (mapStatsSubtab && mapStatsSubtab.classList.contains('active')) {
                     loadMapStats();
                 }
+                // Load match history if match history sub-tab is active
+                const matchHistorySubtab = document.getElementById('match-history-subtab');
+                if (matchHistorySubtab && matchHistorySubtab.classList.contains('active')) {
+                    loadAllMatchHistory();
+                }
             }
         });
     });
@@ -578,6 +583,10 @@ function setupStatsSubtabs() {
             if (targetSubtab === 'map-stats') {
                 loadMapStats();
             }
+            // Load match history if switching to match history tab
+            if (targetSubtab === 'match-history') {
+                loadAllMatchHistory();
+            }
         });
     });
 }
@@ -839,6 +848,318 @@ function displayMatchHistory(matchHistory) {
         
         container.appendChild(card);
     });
+}
+
+// Global variable for match history pagination
+let allMatches = [];
+let currentMatchPage = 1;
+const matchesPerPage = 10;
+
+// Load and display all match history
+async function loadAllMatchHistory(page = 1) {
+    try {
+        const response = await fetch('/api/all-matches');
+        const data = await response.json();
+        
+        const container = document.getElementById('all-match-history-cards');
+        const noMatchesMsg = document.getElementById('no-all-matches-message');
+        const pagination = document.getElementById('match-pagination');
+        
+        if (!container || !noMatchesMsg || !pagination) return;
+        
+        if (!data.success || !data.matches || data.matches.length === 0) {
+            container.style.display = 'none';
+            noMatchesMsg.style.display = 'block';
+            pagination.style.display = 'none';
+            return;
+        }
+        
+        allMatches = data.matches;
+        currentMatchPage = page;
+        
+        // Calculate pagination
+        const totalPages = Math.ceil(allMatches.length / matchesPerPage);
+        const startIndex = (page - 1) * matchesPerPage;
+        const endIndex = startIndex + matchesPerPage;
+        const matchesToShow = allMatches.slice(startIndex, endIndex);
+        
+        container.style.display = 'flex';
+        noMatchesMsg.style.display = 'none';
+        container.innerHTML = '';
+        
+        matchesToShow.forEach(match => {
+            const card = document.createElement('div');
+            card.className = 'match-history-card';
+            card.setAttribute('data-match-num', match.match_num);
+            
+            // Set map background if available
+            if (match.map_name) {
+                const mapImagePath = getMapImagePath(match.map_name);
+                if (mapImagePath) {
+                    card.style.setProperty('--map-bg-image', `url('${mapImagePath}')`);
+                    card.setAttribute('data-map', match.map_name.toLowerCase());
+                }
+            }
+            
+            const team1Won = match.winning_team === 'Team 1';
+            const team2Won = match.winning_team === 'Team 2';
+            
+            card.innerHTML = `
+                <div class="match-card-overlay"></div>
+                <div class="match-card-content">
+                    <div class="match-card-header">
+                        <span class="match-id">Match ${match.match_num}</span>
+                        ${match.map_name ? `<span class="match-map">${match.map_name}</span>` : ''}
+                    </div>
+                    <div class="match-score-display">
+                        <div class="team-score ${team1Won ? 'winner' : ''}">
+                            <div class="team-name">Team 1</div>
+                            <div class="score-value">${match.team1_score}</div>
+                        </div>
+                        <div class="score-separator">-</div>
+                        <div class="team-score ${team2Won ? 'winner' : ''}">
+                            <div class="team-name">Team 2</div>
+                            <div class="score-value">${match.team2_score}</div>
+                        </div>
+                    </div>
+                    <div class="match-card-footer">
+                        <span class="match-rounds">${match.total_rounds} rounds</span>
+                        <span class="match-date">${new Date(match.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Add click event to show match details
+            card.addEventListener('click', () => {
+                showMatchDetails(match.match_num);
+            });
+            
+            container.appendChild(card);
+        });
+        
+        // Render pagination
+        renderMatchPagination(totalPages, page);
+    } catch (error) {
+        console.error('Error loading match history:', error);
+    }
+}
+
+// Render pagination controls
+function renderMatchPagination(totalPages, currentPage) {
+    const pagination = document.getElementById('match-pagination');
+    if (!pagination) return;
+    
+    if (totalPages <= 1) {
+        pagination.style.display = 'none';
+        return;
+    }
+    
+    pagination.style.display = 'flex';
+    pagination.innerHTML = '';
+    
+    // Previous button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'pagination-btn';
+    prevBtn.textContent = '←';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            loadAllMatchHistory(currentPage - 1);
+        }
+    });
+    pagination.appendChild(prevBtn);
+    
+    // Page numbers
+    const pageNumbers = document.createElement('div');
+    pageNumbers.className = 'pagination-numbers';
+    
+    // Show first page
+    if (currentPage > 3) {
+        const firstBtn = createPageButton(1, currentPage);
+        pageNumbers.appendChild(firstBtn);
+        if (currentPage > 4) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'pagination-ellipsis';
+            ellipsis.textContent = '...';
+            pageNumbers.appendChild(ellipsis);
+        }
+    }
+    
+    // Show pages around current page
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = createPageButton(i, currentPage);
+        pageNumbers.appendChild(pageBtn);
+    }
+    
+    // Show last page
+    if (currentPage < totalPages - 2) {
+        if (currentPage < totalPages - 3) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'pagination-ellipsis';
+            ellipsis.textContent = '...';
+            pageNumbers.appendChild(ellipsis);
+        }
+        const lastBtn = createPageButton(totalPages, currentPage);
+        pageNumbers.appendChild(lastBtn);
+    }
+    
+    pagination.appendChild(pageNumbers);
+    
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'pagination-btn';
+    nextBtn.textContent = '→';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            loadAllMatchHistory(currentPage + 1);
+        }
+    });
+    pagination.appendChild(nextBtn);
+}
+
+// Create a page number button
+function createPageButton(pageNum, currentPage) {
+    const btn = document.createElement('button');
+    btn.className = 'pagination-page-btn';
+    if (pageNum === currentPage) {
+        btn.classList.add('active');
+    }
+    btn.textContent = pageNum;
+    btn.addEventListener('click', () => {
+        loadAllMatchHistory(pageNum);
+    });
+    return btn;
+}
+
+// Show match details modal
+async function showMatchDetails(matchNum) {
+    try {
+        const response = await fetch(`/api/match-details/${matchNum}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert('Error loading match details');
+            return;
+        }
+        
+        const modal = document.getElementById('match-details-modal');
+        const content = document.getElementById('match-details-content');
+        
+        const match = data.match;
+        const team1Stats = data.team1_stats || [];
+        const team2Stats = data.team2_stats || [];
+        const metadata = data.metadata || {};
+        
+        const team1Won = match.winning_team === 'Team 1';
+        const team2Won = match.winning_team === 'Team 2';
+        
+        // Build match details HTML (Faceit style)
+        let html = `
+            <div class="match-details-header">
+                <div class="match-details-title">
+                    <h2>Match ${match.match_num}</h2>
+                    ${match.map_name ? `<span class="match-details-map">${match.map_name}</span>` : ''}
+                </div>
+                <div class="match-details-score">
+                    <div class="team-detail-score ${team1Won ? 'winner' : ''}">
+                        <div class="team-detail-name">Team 1</div>
+                        <div class="team-detail-score-value">${match.team1_score}</div>
+                    </div>
+                    <div class="score-separator-large">-</div>
+                    <div class="team-detail-score ${team2Won ? 'winner' : ''}">
+                        <div class="team-detail-name">Team 2</div>
+                        <div class="team-detail-score-value">${match.team2_score}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="match-details-teams">
+                <div class="team-details ${team1Won ? 'winner-team' : ''}">
+                    <div class="team-details-header">
+                        <h3>Team 1 ${team1Won ? '<span class="winner-badge">WIN</span>' : ''}</h3>
+                    </div>
+                    <div class="team-players-list">
+                        <div class="player-stats-header">
+                            <div class="player-header-name">Player</div>
+                            <div class="player-header-stats">
+                                <span class="stat-header">K</span>
+                                <span class="stat-header">D</span>
+                                <span class="stat-header">A</span>
+                                <span class="stat-header">ADR</span>
+                            </div>
+                        </div>
+                        ${team1Stats.map(player => `
+                            <div class="player-detail-row ${player.MVP > 0 ? 'mvp-player' : ''}">
+                                <div class="player-detail-name">${player.Name || 'Unknown'}</div>
+                                <div class="player-detail-stats">
+                                    <span class="stat-k">${player.K || 0}</span>
+                                    <span class="stat-d">${player.D || 0}</span>
+                                    <span class="stat-a">${player.A || 0}</span>
+                                    <span class="stat-adr">${player.ADR || 0}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="team-details ${team2Won ? 'winner-team' : ''}">
+                    <div class="team-details-header">
+                        <h3>Team 2 ${team2Won ? '<span class="winner-badge">WIN</span>' : ''}</h3>
+                    </div>
+                    <div class="team-players-list">
+                        <div class="player-stats-header">
+                            <div class="player-header-name">Player</div>
+                            <div class="player-header-stats">
+                                <span class="stat-header">K</span>
+                                <span class="stat-header">D</span>
+                                <span class="stat-header">A</span>
+                                <span class="stat-header">ADR</span>
+                            </div>
+                        </div>
+                        ${team2Stats.map(player => `
+                            <div class="player-detail-row ${player.MVP > 0 ? 'mvp-player' : ''}">
+                                <div class="player-detail-name">${player.Name || 'Unknown'}</div>
+                                <div class="player-detail-stats">
+                                    <span class="stat-k">${player.K || 0}</span>
+                                    <span class="stat-d">${player.D || 0}</span>
+                                    <span class="stat-a">${player.A || 0}</span>
+                                    <span class="stat-adr">${player.ADR || 0}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        content.innerHTML = html;
+        modal.classList.add('active');
+        
+        // Close modal handlers
+        const closeBtn = document.getElementById('match-modal-close');
+        const overlay = modal.querySelector('.match-modal-overlay');
+        
+        closeBtn.onclick = () => closeMatchModal();
+        overlay.onclick = () => closeMatchModal();
+        
+        // Close on ESC key
+        document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') {
+                closeMatchModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading match details:', error);
+        alert('Error loading match details');
+    }
+}
+
+function closeMatchModal() {
+    const modal = document.getElementById('match-details-modal');
+    modal.classList.remove('active');
 }
 
 function getMapImagePath(mapName) {

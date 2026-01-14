@@ -1097,6 +1097,71 @@ def extract_stats_from_image(image_bytes):
         import traceback
         return {"error": f"OCR processing failed: {str(e)}\n{traceback.format_exc()}"}
 
+@app.route('/api/all-matches')
+def get_all_matches():
+    """Get all matches from database"""
+    try:
+        matches = db.get_all_matches(limit=100)
+        return jsonify({
+            "success": True,
+            "matches": matches
+        })
+    except Exception as e:
+        print(f"Error getting all matches: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "matches": []
+        })
+
+@app.route('/api/match-details/<int:match_num>')
+def get_match_details(match_num):
+    """Get detailed match information including player stats"""
+    try:
+        match = db.get_match(match_num)
+        if not match:
+            return jsonify({
+                "success": False,
+                "error": "Match not found"
+            }), 404
+        
+        # Load player stats from match history files
+        import os
+        import pandas as pd
+        import json
+        
+        match_path = f'./match_history/S4/match_{match_num}'
+        team1_stats = []
+        team2_stats = []
+        
+        if os.path.exists(f'{match_path}/t1.csv'):
+            df1 = pd.read_csv(f'{match_path}/t1.csv')
+            team1_stats = df1.to_dict('records')
+        
+        if os.path.exists(f'{match_path}/t2.csv'):
+            df2 = pd.read_csv(f'{match_path}/t2.csv')
+            team2_stats = df2.to_dict('records')
+        
+        # Load metadata if available
+        metadata = {}
+        if os.path.exists(f'{match_path}/metadata.json'):
+            with open(f'{match_path}/metadata.json', 'r') as f:
+                metadata = json.load(f)
+        
+        return jsonify({
+            "success": True,
+            "match": match,
+            "team1_stats": team1_stats,
+            "team2_stats": team2_stats,
+            "metadata": metadata
+        })
+    except Exception as e:
+        print(f"Error getting match details: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 @app.route('/api/upload-screenshot', methods=['POST'])
 def upload_screenshot():
     """Handle screenshot upload and extract stats"""

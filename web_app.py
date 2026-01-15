@@ -463,27 +463,41 @@ def create_match():
     t1_gain = 25 - min(25, (ELO_1 - ELO_2) // 50)
     t2_gain = 25 + min(25, (ELO_1 - ELO_2) // 50)
     
+    # Get all players sorted by ELO to calculate ranks
+    df_all_sorted = df_current.sort_values('ELO', ascending=False).reset_index(drop=True)
+    player_ranks = {name: idx + 1 for idx, name in enumerate(df_all_sorted["Name"])}
+    
     # Format teams
     team_1 = []
     for _, row in df_1.iterrows():
         rank = get_rank(row["ELO"])
         icon_data = get_rank_icon_base64(rank)
+        streak = calculate_streak(row["Name"])
+        player_rank = player_ranks.get(row["Name"], 0)
         team_1.append({
             "name": row["Name"],
             "rank_icon": icon_data,
             "kd": round(row["K/D"], 2),
-            "elo": int(row["ELO"])
+            "elo": int(row["ELO"]),
+            "streak_type": streak["type"],
+            "streak_count": streak["count"],
+            "rank": player_rank
         })
     
     team_2 = []
     for _, row in df_2.iterrows():
         rank = get_rank(row["ELO"])
         icon_data = get_rank_icon_base64(rank)
+        streak = calculate_streak(row["Name"])
+        player_rank = player_ranks.get(row["Name"], 0)
         team_2.append({
             "name": row["Name"],
             "rank_icon": icon_data,
             "kd": round(row["K/D"], 2),
-            "elo": int(row["ELO"])
+            "elo": int(row["ELO"]),
+            "streak_type": streak["type"],
+            "streak_count": streak["count"],
+            "rank": player_rank
         })
     
     # Generate command

@@ -70,13 +70,13 @@ function renderDatabaseTable(players) {
     players.forEach((player, index) => {
         const row = document.createElement('tr');
         
-        // Determine streak display
+        // Determine streak display - only show streaks of 3 or more
         let streakDisplay = '';
         let playerNameClass = '';
-        if (player.streak_type === 'win' && player.streak_count > 0) {
+        if (player.streak_type === 'win' && player.streak_count >= 3) {
             streakDisplay = `🔥 ${player.streak_count}`;
             row.classList.add('win-streak');
-        } else if (player.streak_type === 'loss' && player.streak_count > 0) {
+        } else if (player.streak_type === 'loss' && player.streak_count >= 3) {
             streakDisplay = `❄️ ${player.streak_count}`;
             playerNameClass = 'lose-streak-name';
             row.classList.add('lose-streak');
@@ -406,12 +406,26 @@ function renderTeam(cardsId, team) {
     container.innerHTML = '';
     
     team.forEach(player => {
+        // Determine streak display - only show streaks of 3 or more
+        let streakDisplay = '';
+        if (player.streak_type === 'win' && player.streak_count >= 3) {
+            streakDisplay = `🔥 ${player.streak_count}`;
+        } else if (player.streak_type === 'loss' && player.streak_count >= 3) {
+            streakDisplay = `❄️ ${player.streak_count}`;
+        }
+        
         const card = document.createElement('div');
         card.className = 'player-card';
         card.innerHTML = `
             <div class="player-card-left">
                 <img src="${player.rank_icon}" alt="rank" class="player-card-rank">
-                <span class="player-card-name">${player.name}</span>
+                <div class="player-card-name-container">
+                    <span class="player-card-name">
+                        ${player.name}
+                        ${streakDisplay ? `<span class="player-card-streak">${streakDisplay}</span>` : ''}
+                    </span>
+                    <span class="player-card-rank-text">Rank #${player.rank || 'N/A'}</span>
+                </div>
             </div>
             <div class="player-card-stats">
                 <div class="player-stat">

@@ -101,9 +101,9 @@ def get_rank(elo):
         return "gold"
     elif elo < 1100:
         return "diamond"
-    elif elo < 1300:
+    elif elo < 1200:
         return "elite"
-    elif elo < 1500:
+    elif elo < 1300:
         return "gosu"
     else:
         return "worthy"
@@ -1116,9 +1116,45 @@ def get_all_matches():
     """Get all matches from database"""
     try:
         matches = db.get_all_matches(limit=100)
+
+        # Enrich matches with MVP information from match history files
+        enriched_matches = []
+        for match in matches:
+            match_num = match.get("match_num")
+            mvp_name = None
+            try:
+                match_path = f'./match_history/S4/match_{match_num}'
+                t1_path = os.path.join(match_path, 't1.csv')
+                t2_path = os.path.join(match_path, 't2.csv')
+
+                players_df_list = []
+                if os.path.exists(t1_path):
+                    players_df_list.append(pd.read_csv(t1_path))
+                if os.path.exists(t2_path):
+                    players_df_list.append(pd.read_csv(t2_path))
+
+                if players_df_list:
+                    combined_df = pd.concat(players_df_list, ignore_index=True)
+                    if "MVP" in combined_df.columns and "Name" in combined_df.columns:
+                        # Prefer players with MVP > 0
+                        mvp_df = combined_df[combined_df["MVP"] > 0]
+                        if not mvp_df.empty:
+                            mvp_name = str(mvp_df.iloc[0]["Name"])
+                        else:
+                            # Fallback: player with highest kills
+                            if "K" in combined_df.columns:
+                                top_k = combined_df.sort_values("K", ascending=False).iloc[0]
+                                mvp_name = str(top_k["Name"])
+            except Exception:
+                # If anything goes wrong, just skip MVP for this match
+                mvp_name = None
+
+            match["mvp_name"] = mvp_name
+            enriched_matches.append(match)
+
         return jsonify({
             "success": True,
-            "matches": matches
+            "matches": enriched_matches
         })
     except Exception as e:
         print(f"Error getting all matches: {e}")

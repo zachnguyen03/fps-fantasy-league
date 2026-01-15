@@ -1288,6 +1288,156 @@ h1, h2, h3 {
     box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
 }
 
+/* Top 10 Player Card - Vibrant and Fierce */
+.player-card.top-10-player {
+    background: linear-gradient(135deg, 
+        rgba(255, 215, 0, 0.25) 0%, 
+        rgba(255, 165, 0, 0.2) 25%,
+        rgba(255, 215, 0, 0.2) 50%,
+        rgba(255, 165, 0, 0.2) 75%,
+        rgba(255, 215, 0, 0.25) 100%);
+    border: 3px solid #ffd700;
+    box-shadow: 
+        0 4px 20px rgba(255, 215, 0, 0.5),
+        0 0 30px rgba(255, 215, 0, 0.3),
+        inset 0 0 20px rgba(255, 215, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.player-card.top-10-player::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 215, 0, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(255, 165, 0, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 50% 20%, rgba(255, 215, 0, 0.2) 0%, transparent 50%);
+    animation: fireFlicker 1.5s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.player-card.top-10-player::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: 
+        radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%),
+        radial-gradient(circle, rgba(255, 165, 0, 0.2) 0%, transparent 60%);
+    animation: fireWave 2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.player-card.top-10-player:hover {
+    background: linear-gradient(135deg, 
+        rgba(255, 215, 0, 0.35) 0%, 
+        rgba(255, 165, 0, 0.3) 25%,
+        rgba(255, 215, 0, 0.3) 50%,
+        rgba(255, 165, 0, 0.3) 75%,
+        rgba(255, 215, 0, 0.35) 100%);
+    border-color: #ffed4e;
+    box-shadow: 
+        0 6px 30px rgba(255, 215, 0, 0.7),
+        0 0 40px rgba(255, 215, 0, 0.5),
+        inset 0 0 25px rgba(255, 215, 0, 0.2);
+    transform: translateX(4px) scale(1.03);
+}
+
+.player-card.top-10-player .player-card-left,
+.player-card.top-10-player .player-card-stats {
+    position: relative;
+    z-index: 1;
+}
+
+.player-card.top-10-player .player-card-name {
+    color: #ffd700;
+    text-shadow: 
+        0 0 10px rgba(255, 215, 0, 0.9),
+        0 0 20px rgba(255, 215, 0, 0.6),
+        0 2px 4px rgba(0, 0, 0, 0.5);
+    font-weight: 800;
+    animation: textFlicker 2s ease-in-out infinite alternate;
+}
+
+.player-card.top-10-player .player-card-rank-text {
+    color: rgba(255, 215, 0, 0.95);
+    font-weight: 700;
+    text-shadow: 
+        0 0 8px rgba(255, 215, 0, 0.8),
+        0 0 12px rgba(255, 215, 0, 0.5);
+}
+
+.player-card.top-10-player .player-card-streak {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9));
+    animation: emojiFlicker 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes fireFlicker {
+    0% {
+        opacity: 0.6;
+        transform: scale(1) rotate(0deg);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05) rotate(2deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.1) rotate(-2deg);
+    }
+}
+
+@keyframes fireWave {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translateY(-10px) scale(1.1);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.3;
+    }
+}
+
+@keyframes textFlicker {
+    0% {
+        text-shadow: 
+            0 0 10px rgba(255, 215, 0, 0.9),
+            0 0 20px rgba(255, 215, 0, 0.6),
+            0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    100% {
+        text-shadow: 
+            0 0 15px rgba(255, 215, 0, 1),
+            0 0 25px rgba(255, 215, 0, 0.8),
+            0 0 35px rgba(255, 215, 0, 0.4),
+            0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+}
+
+@keyframes emojiFlicker {
+    0% {
+        filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9));
+        transform: scale(1);
+    }
+    100% {
+        filter: drop-shadow(0 0 12px rgba(255, 215, 0, 1)) drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
+        transform: scale(1.1);
+    }
+}
+
 .player-card-left {
     display: flex;
     align-items: center;
@@ -2171,8 +2321,8 @@ h1, h2, h3 {
 }
 
 .match-card-footer {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1.2fr 1.5fr 1fr;
     align-items: center;
     margin-top: 8px;
     padding-top: 12px;
@@ -2182,8 +2332,15 @@ h1, h2, h3 {
 }
 
 .match-rounds,
-.match-date {
+.match-date,
+.match-mvp {
     font-weight: 500;
+}
+
+.match-mvp {
+    text-align: center;
+    font-weight: 600;
+    color: #fde68a;
 }
 
 /* Match Details Modal (Faceit Style) */

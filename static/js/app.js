@@ -414,8 +414,11 @@ function renderTeam(cardsId, team) {
             streakDisplay = `❄️ ${player.streak_count}`;
         }
         
+        // Check if player is top 10 (rank 10 or above)
+        const isTop10 = player.rank && player.rank <= 10;
+        
         const card = document.createElement('div');
-        card.className = 'player-card';
+        card.className = `player-card ${isTop10 ? 'top-10-player' : ''}`;
         card.innerHTML = `
             <div class="player-card-left">
                 <img src="${player.rank_icon}" alt="rank" class="player-card-rank">
@@ -938,6 +941,7 @@ async function loadAllMatchHistory(page = 1) {
                     </div>
                     <div class="match-card-footer">
                         <span class="match-rounds">${match.total_rounds} rounds</span>
+                        <span class="match-mvp">${match.mvp_name ? `MVP: ${match.mvp_name}` : 'MVP: -'}</span>
                         <span class="match-date">${new Date(match.created_at).toLocaleDateString()}</span>
                     </div>
                 </div>

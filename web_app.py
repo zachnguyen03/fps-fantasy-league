@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify, request, send_from_directory
 import numpy as np
-from random import sample
+from random import sample, choice
 import pandas as pd
 import os
 import base64
@@ -441,22 +441,62 @@ def get_database():
 
 @app.route('/api/create-match', methods=['POST'])
 def create_match():
-    """Create a new match with random teams"""
+    """Create a new match with balanced teams"""
     data = request.json
     online_list = data.get('online_players', [])
     
     if len(online_list) < 10:
         return jsonify({"error": "Not enough online players"}), 400
     
-    team_1_names = sample(online_list, 5)
-    team_2_names = sample([p for p in online_list if p not in team_1_names], 5)
-    
     df_current = global_context["database"]
+    
+    # Generate 10 different team combinations
+    combinations = []
+    for _ in range(10):
+        team_1_names = sample(online_list, 5)
+        remaining_players = [p for p in online_list if p not in team_1_names]
+        team_2_names = sample(remaining_players, 5) if len(remaining_players) >= 5 else remaining_players
+        
+        df_1 = df_current.loc[df_current['Name'].isin(team_1_names)]
+        df_2 = df_current.loc[df_current['Name'].isin(team_2_names)]
+        
+        ELO_1 = df_1["ELO"].sum()
+        ELO_2 = df_2["ELO"].sum()
+        elo_diff = abs(ELO_1 - ELO_2)
+        
+        combinations.append({
+            'team_1_names': team_1_names,
+            'team_2_names': team_2_names,
+            'elo_diff': elo_diff,
+            'elo_1': ELO_1,
+            'elo_2': ELO_2
+        })
+    
+    # Sort by ELO difference (lowest first) and get top 3
+    combinations.sort(key=lambda x: x['elo_diff'])
+    top_5_combinations = combinations[:5]
+    
+    # Randomly select one from the top 3
+    selected = choice(top_5_combinations)
+    
+    team_1_names = selected['team_1_names']
+    team_2_names = selected['team_2_names']
+    
+    # Ensure exactly 5 players per team
+    team_1_names = team_1_names[:5]
+    team_2_names = team_2_names[:5]
+    
     df_1 = df_current.loc[df_current['Name'].isin(team_1_names)]
     df_2 = df_current.loc[df_current['Name'].isin(team_2_names)]
     
-    ELO_1 = df_1["ELO"].sum()
-    ELO_2 = df_2["ELO"].sum()
+    # Ensure we only get exactly 5 players (in case of duplicates in database)
+    if len(df_1) > 5:
+        df_1 = df_1.head(5)
+    if len(df_2) > 5:
+        df_2 = df_2.head(5)
+    
+    ELO_1 = selected['elo_1']
+    ELO_2 = selected['elo_2']
     
     map_name = np.random.choice(['Dust2', 'Inferno', 'Mirage', 'Vertigo', 'Anubis', 'Ancient', 'Train', 'Nuke'])
     elo_diff = ELO_1 - ELO_2

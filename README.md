@@ -18,29 +18,32 @@ The following installation suppose `python=3.9` `gradio`
 - Clone the repository
 
   ```
-  git clone https://github.com/zachnguyen03/vct_simulator.git
-  cd vct_simulator
+  git clone https://github.com/zachnguyen03/fps-fantasy-league.git
+  cd fps-fantasy-league
   ```
 
 - Environment Installation
   ```
   conda create -n vct python=3.9
   conda activate vct
-  pip install gradio
+  pip install -r requirements.txt
   ```
 
 - Initialize the UI
   ```
-  python app.py
+  python web_app.py
   ```
 
 - User interface preview ![demo](./assets/demo.png)
 
 ## :nut_and_bolt: Inference :nut_and_bolt:
-- [x] App UI
+- [x] Tweaked UI
 - [x] Create live game + update scoreboard
 - [x] ELO system
-- [x] Save match history
 - [x] Enhanced ELO system with performance-driven scores
-- [ ] OCR integration for automatic scoreboard logging using uploaded screenshot 
-- [x] Statistical plots
+- [x] OCR integration for automatic scoreboard logging using uploaded screenshot 
+- [x] Advanced Matchmaking Logic
+- [x] Database Integration
+- [x] Player + Map Stats + Match History Available
+- [ ] Live Integration with game API
+- [ ] Advanced statistics summary

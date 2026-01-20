@@ -230,6 +230,7 @@
                 <button type="button" class="stats-subtab-btn active" data-subtab="player-stats">Player Stats</button>
                 <button type="button" class="stats-subtab-btn" data-subtab="map-stats">Map Stats</button>
                 <button type="button" class="stats-subtab-btn" data-subtab="match-history">Match History</button>
+                <button type="button" class="stats-subtab-btn" data-subtab="records">Records</button>
             </div>
 
             <!-- Player Stats Sub-tab -->
@@ -251,6 +252,7 @@
                         <img id="player-rank-icon" src="" alt="rank" class="player-rank-icon-large">
                         <div class="player-header-info">
                             <h2 id="player-name">Player Name</h2>
+                            <div id="player-leader-badges" class="leader-badges"></div>
                             <div class="player-header-stats">
                                 <span class="stat-badge elo-badge" id="player-elo">1000 ELO</span>
                                 <span class="stat-badge matches-badge" id="player-matches">0 Matches</span>
@@ -398,6 +400,19 @@
                     </div>
                     <div id="match-pagination" class="match-pagination" style="display: none;">
                         <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Records Sub-tab -->
+            <div id="records-subtab" class="stats-subtab-content">
+                <div class="records-container">
+                    <div id="records-cards" class="records-cards">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div id="no-records-message" class="no-matches-message" style="display: none;">
+                        <p>No records available</p>
+                        <p class="subtext">Records will appear here after matches are played.</p>
                     </div>
                 </div>
             </div>

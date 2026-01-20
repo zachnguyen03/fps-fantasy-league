@@ -234,6 +234,101 @@ h1, h2, h3 {
     display: block;
 }
 
+/* Leader badges */
+.leader-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.leader-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    line-height: 1.1;
+}
+
+.player-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.player-card .leader-badges {
+    margin-top: 0;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 3px;
+}
+
+.player-card .leader-badge {
+    padding: 1px 4px;
+    font-size: 0.55rem;
+}
+
+.leader-badge.adr { border-color: rgba(249, 115, 22, 0.35); }
+.leader-badge.kpr { border-color: rgba(16, 185, 129, 0.35); }
+.leader-badge.rating { border-color: rgba(59, 130, 246, 0.35); }
+.leader-badge.kd { border-color: rgba(245, 158, 11, 0.35); }
+
+/* Records */
+.records-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.record-card {
+    background: linear-gradient(135deg, rgba(26, 31, 53, 0.95) 0%, rgba(11, 16, 32, 0.95) 100%);
+    border: 1px solid rgba(249, 115, 22, 0.18);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    cursor: default;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.record-card.clickable {
+    cursor: pointer;
+}
+
+.record-card.clickable:hover {
+    transform: translateY(-2px);
+    border-color: rgba(249, 115, 22, 0.35);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+.record-card-title {
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.record-card-value {
+    margin-top: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.record-card-subtitle {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.9rem;
+}
+
 /* Buttons */
 .btn {
     padding: 12px 24px;

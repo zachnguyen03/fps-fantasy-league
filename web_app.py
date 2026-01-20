@@ -437,7 +437,39 @@ def get_database():
         player['top3_dpr_rank'] = top3_dpr_ranks.get(player['name'], 0)
         player['top3_apr_rank'] = top3_apr_ranks.get(player['name'], 0)
         player['top3_adr_rank'] = top3_adr_ranks.get(player['name'], 0)
+        # Leader badges (rank #1 for that stat)
+        player['is_rating_leader'] = player['top3_rating_rank'] == 1
+        player['is_kd_leader'] = player['top3_kd_rank'] == 1
+        player['is_kpr_leader'] = player['top3_kpr_rank'] == 1
+        player['is_adr_leader'] = player['top3_adr_rank'] == 1
     return jsonify(players)
+
+def _compute_global_leader_names(df_current):
+    """Compute global #1 leader names for selected stats from current DB snapshot."""
+    leaders = {
+        "rating": None,
+        "kd": None,
+        "kpr": None,
+        "adr": None,
+    }
+    try:
+        if df_current is None or df_current.empty:
+            return leaders
+        # Use numeric coercion + idxmax safety
+        for key, col in [("rating", "Rating"), ("kd", "K/D"), ("kpr", "KPR"), ("adr", "ADR")]:
+            if col not in df_current.columns:
+                continue
+            series = pd.to_numeric(df_current[col], errors="coerce")
+            if series.isna().all():
+                continue
+            idx = series.idxmax()
+            try:
+                leaders[key] = str(df_current.loc[idx, "Name"])
+            except Exception:
+                leaders[key] = None
+    except Exception:
+        return leaders
+    return leaders
 
 @app.route('/api/create-match', methods=['POST'])
 def create_match():
@@ -449,6 +481,7 @@ def create_match():
         return jsonify({"error": "Not enough online players"}), 400
     
     df_current = global_context["database"]
+    leaders = _compute_global_leader_names(df_current)
     
     # Generate 10 different team combinations
     combinations = []
@@ -521,7 +554,11 @@ def create_match():
             "elo": int(row["ELO"]),
             "streak_type": streak["type"],
             "streak_count": streak["count"],
-            "rank": player_rank
+            "rank": player_rank,
+            "is_rating_leader": (row["Name"] == leaders.get("rating")),
+            "is_kd_leader": (row["Name"] == leaders.get("kd")),
+            "is_kpr_leader": (row["Name"] == leaders.get("kpr")),
+            "is_adr_leader": (row["Name"] == leaders.get("adr")),
         })
     
     team_2 = []
@@ -537,7 +574,11 @@ def create_match():
             "elo": int(row["ELO"]),
             "streak_type": streak["type"],
             "streak_count": streak["count"],
-            "rank": player_rank
+            "rank": player_rank,
+            "is_rating_leader": (row["Name"] == leaders.get("rating")),
+            "is_kd_leader": (row["Name"] == leaders.get("kd")),
+            "is_kpr_leader": (row["Name"] == leaders.get("kpr")),
+            "is_adr_leader": (row["Name"] == leaders.get("adr")),
         })
     
     # Generate command
@@ -555,6 +596,104 @@ def create_match():
         "t2_gain": int(t2_gain),
         "command": command
     })
+
+@app.route('/api/records')
+def get_records():
+    """Get match/player 'records' across all recorded matches."""
+    try:
+        # Pull a large limit; local DB, so it's fine.
+        matches = db.get_all_matches(limit=100000)
+        if not matches:
+            return jsonify({"success": True, "records": {}})
+
+        def _match_summary(m):
+            return {
+                "match_num": m.get("match_num"),
+                "map_name": m.get("map_name"),
+                "team1_score": m.get("team1_score"),
+                "team2_score": m.get("team2_score"),
+                "winning_team": m.get("winning_team"),
+                "total_rounds": m.get("total_rounds"),
+                "created_at": m.get("created_at"),
+            }
+
+        longest = max(matches, key=lambda m: int(m.get("total_rounds") or 0))
+        shortest = min(matches, key=lambda m: int(m.get("total_rounds") or 0))
+
+        # Per-player single-match records
+        best_kills = None
+        best_deaths = None
+        best_rating = None
+        best_kpr = None
+
+        def _better(curr, cand):
+            if cand is None:
+                return curr
+            if curr is None:
+                return cand
+            return cand if cand["value"] > curr["value"] else curr
+
+        for m in matches:
+            match_num = m.get("match_num")
+            total_rounds = int(m.get("total_rounds") or 0)
+            if not match_num or total_rounds <= 0:
+                continue
+
+            match_path = f'./match_history/S4/match_{match_num}'
+            t1_path = f'{match_path}/t1.csv'
+            t2_path = f'{match_path}/t2.csv'
+            if not (os.path.exists(t1_path) and os.path.exists(t2_path)):
+                continue
+
+            try:
+                t1_df = pd.read_csv(t1_path)
+                t2_df = pd.read_csv(t2_path)
+                all_df = pd.concat([t1_df, t2_df], ignore_index=True)
+            except Exception:
+                continue
+
+            # Expected columns: Name, K, D, A, ADR, MVP
+            for _, row in all_df.iterrows():
+                name = str(row.get("Name", "")).strip()
+                if not name:
+                    continue
+                k = int(row.get("K", 0) or 0)
+                d = int(row.get("D", 0) or 0)
+                a = int(row.get("A", 0) or 0)
+                adr = float(row.get("ADR", 0.0) or 0.0)
+
+                kd = (k / (d or 1))
+                kpr = (k / total_rounds)
+                # Single-match "rating" aligned to existing season formula (per-match KPM==K, APM==A)
+                rating = 0.28 * kd + 0.02 * k + 0.006 * a + 0.0058 * adr
+
+                base = {
+                    "player": name,
+                    "match_num": match_num,
+                    "map_name": m.get("map_name"),
+                    "team1_score": m.get("team1_score"),
+                    "team2_score": m.get("team2_score"),
+                    "total_rounds": total_rounds,
+                }
+
+                best_kills = _better(best_kills, {**base, "value": float(k)})
+                best_deaths = _better(best_deaths, {**base, "value": float(d)})
+                best_rating = _better(best_rating, {**base, "value": float(rating)})
+                best_kpr = _better(best_kpr, {**base, "value": float(kpr)})
+
+        records = {
+            "longest_match": _match_summary(longest),
+            "shortest_match": _match_summary(shortest),
+            "highest_kills_single_match": best_kills,
+            "highest_deaths_single_match": best_deaths,
+            "highest_rating_single_match": best_rating,
+            "highest_kpr_single_match": best_kpr,
+        }
+
+        return jsonify({"success": True, "records": records})
+    except Exception as e:
+        print(f"Error getting records: {e}")
+        return jsonify({"success": False, "error": str(e), "records": {}})
 
 @app.route('/api/submit-match', methods=['POST'])
 def submit_match():

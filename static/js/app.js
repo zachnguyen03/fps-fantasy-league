@@ -12,6 +12,27 @@ document.addEventListener('DOMContentLoaded', () => {
     setupStatsSubtabs();
 });
 
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderLeaderBadgesHtml(player) {
+    if (!player) return '';
+    const badges = [];
+    if (player.is_adr_leader) badges.push('<span class="leader-badge adr">ADR Leader</span>');
+    if (player.is_kpr_leader) badges.push('<span class="leader-badge kpr">KPR Leader</span>');
+    if (player.is_rating_leader) badges.push('<span class="leader-badge rating">Rating Leader</span>');
+    if (player.is_kd_leader) badges.push('<span class="leader-badge kd">K/D Leader</span>');
+    if (badges.length === 0) return '';
+    return `<div class="leader-badges">${badges.join('')}</div>`;
+}
+
 // Tab switching
 function initTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -45,6 +66,11 @@ function initTabs() {
                 const matchHistorySubtab = document.getElementById('match-history-subtab');
                 if (matchHistorySubtab && matchHistorySubtab.classList.contains('active')) {
                     loadAllMatchHistory();
+                }
+                // Load records if records sub-tab is active
+                const recordsSubtab = document.getElementById('records-subtab');
+                if (recordsSubtab && recordsSubtab.classList.contains('active')) {
+                    loadRecords();
                 }
             }
         });
@@ -426,6 +452,7 @@ function renderTeam(cardsId, team) {
                     <span class="player-card-name">
                         ${player.name}
                         ${streakDisplay ? `<span class="player-card-streak">${streakDisplay}</span>` : ''}
+                        ${renderLeaderBadgesHtml(player)}
                     </span>
                     <span class="player-card-rank-text">Rank #${player.rank || 'N/A'}</span>
                 </div>
@@ -604,8 +631,109 @@ function setupStatsSubtabs() {
             if (targetSubtab === 'match-history') {
                 loadAllMatchHistory();
             }
+            // Load records if switching to records tab
+            if (targetSubtab === 'records') {
+                loadRecords();
+            }
         });
     });
+}
+
+// Load and display records
+async function loadRecords() {
+    try {
+        const response = await fetch('/api/records');
+        const data = await response.json();
+
+        const container = document.getElementById('records-cards');
+        const noRecordsMsg = document.getElementById('no-records-message');
+        if (!container || !noRecordsMsg) return;
+
+        if (!data.success || !data.records || Object.keys(data.records).length === 0) {
+            container.style.display = 'none';
+            noRecordsMsg.style.display = 'block';
+            return;
+        }
+
+        const r = data.records;
+        container.style.display = 'grid';
+        noRecordsMsg.style.display = 'none';
+        container.innerHTML = '';
+
+        function matchLine(m) {
+            if (!m) return '-';
+            const map = m.map_name ? ` • ${escapeHtml(m.map_name)}` : '';
+            const score = (m.team1_score !== undefined && m.team2_score !== undefined) ? ` • ${m.team1_score}-${m.team2_score}` : '';
+            return `Match ${m.match_num}${map}${score}`;
+        }
+
+        function playerLine(p, fmt) {
+            if (!p) return { title: '-', subtitle: '-', value: '-' };
+            const map = p.map_name ? ` • ${escapeHtml(p.map_name)}` : '';
+            const score = (p.team1_score !== undefined && p.team2_score !== undefined) ? ` • ${p.team1_score}-${p.team2_score}` : '';
+            return {
+                title: `${escapeHtml(p.player)}`,
+                subtitle: `Match ${p.match_num}${map}${score}`,
+                value: fmt(p.value)
+            };
+        }
+
+        const cards = [
+            {
+                label: 'Longest Match',
+                value: r.longest_match ? `${r.longest_match.total_rounds} rounds` : '-',
+                subtitle: matchLine(r.longest_match),
+                matchNum: r.longest_match ? r.longest_match.match_num : null
+            },
+            {
+                label: 'Shortest Match',
+                value: r.shortest_match ? `${r.shortest_match.total_rounds} rounds` : '-',
+                subtitle: matchLine(r.shortest_match),
+                matchNum: r.shortest_match ? r.shortest_match.match_num : null
+            },
+            (() => {
+                const p = playerLine(r.highest_kills_single_match, v => `${Math.round(v)} kills`);
+                return { label: 'Highest Kills (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.highest_kills_single_match ? r.highest_kills_single_match.match_num : null };
+            })(),
+            (() => {
+                const p = playerLine(r.highest_deaths_single_match, v => `${Math.round(v)} deaths`);
+                return { label: 'Highest Deaths (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.highest_deaths_single_match ? r.highest_deaths_single_match.match_num : null };
+            })(),
+            (() => {
+                const p = playerLine(r.highest_rating_single_match, v => Number(v).toFixed(2));
+                return { label: 'Highest Rating (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.highest_rating_single_match ? r.highest_rating_single_match.match_num : null };
+            })(),
+            (() => {
+                const p = playerLine(r.highest_kpr_single_match, v => Number(v).toFixed(3));
+                return { label: 'Highest KPR (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.highest_kpr_single_match ? r.highest_kpr_single_match.match_num : null };
+            })(),
+        ];
+
+        cards.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'record-card';
+            const matchNum = c.matchNum;
+            if (matchNum) {
+                card.classList.add('clickable');
+                card.addEventListener('click', () => {
+                    const num = parseInt(matchNum, 10);
+                    if (!isNaN(num) && typeof showMatchDetails === 'function') {
+                        showMatchDetails(num);
+                    }
+                });
+            }
+            card.innerHTML = `
+                <div class="record-card-header">
+                    <div class="record-card-title">${escapeHtml(c.label)}</div>
+                </div>
+                <div class="record-card-value">${escapeHtml(c.value)}</div>
+                <div class="record-card-subtitle">${c.subtitle || '-'}</div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Error loading records:', error);
+    }
 }
 
 // Load and display map statistics
@@ -723,6 +851,13 @@ function displayPlayerStats(stats) {
     document.getElementById('player-elo').textContent = `${stats.elo} ELO`;
     document.getElementById('player-matches').textContent = `${stats.matches} Matches`;
     document.getElementById('player-winrate').textContent = `${stats.win_rate}% WR`;
+
+    // Leader badges (global #1 from Database rankings)
+    const leaderBadgesContainer = document.getElementById('player-leader-badges');
+    if (leaderBadgesContainer) {
+        const dbPlayer = databaseData.find(p => p.name === stats.name);
+        leaderBadgesContainer.innerHTML = renderLeaderBadgesHtml(dbPlayer);
+    }
     
     // Update overview stats
     document.getElementById('stat-wins').textContent = stats.wins;

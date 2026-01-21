@@ -263,6 +263,28 @@ h1, h2, h3 {
     gap: 6px;
 }
 
+.player-ranking {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 18px;
+}
+
+.player-rank-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: rgba(255, 255, 255, 0.95);
+    background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.08) 100%);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    text-transform: uppercase;
+}
+
 .player-card .leader-badges {
     margin-top: 0;
     display: inline-flex;

@@ -740,6 +740,18 @@ async function loadRecords() {
                 const p = playerLine(r.highest_kpr_single_match, v => Number(v).toFixed(3));
                 return { label: 'Highest KPR (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.highest_kpr_single_match ? r.highest_kpr_single_match.match_num : null };
             })(),
+            (() => {
+                const p = playerLine(r.highest_adr_single_match, v => Number(v).toFixed(0));
+                return { label: 'Highest ADR (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.highest_adr_single_match ? r.highest_adr_single_match.match_num : null };
+            })(),
+            (() => {
+                const p = playerLine(r.lowest_kpr_single_match, v => Number(v).toFixed(3));
+                return { label: 'Lowest KPR (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.lowest_kpr_single_match ? r.lowest_kpr_single_match.match_num : null };
+            })(),
+            (() => {
+                const p = playerLine(r.lowest_rating_single_match, v => Number(v).toFixed(2));
+                return { label: 'Lowest Rating (Single Match)', value: p.value, subtitle: `${p.title} • ${p.subtitle}`, matchNum: r.lowest_rating_single_match ? r.lowest_rating_single_match.match_num : null };
+            })(),
         ];
 
         cards.forEach(c => {
@@ -887,9 +899,14 @@ function displayPlayerStats(stats) {
 
     // Leader badges (global #1 from Database rankings)
     const leaderBadgesContainer = document.getElementById('player-leader-badges');
+    const rankingContainer = document.getElementById('player-ranking');
+    const dbPlayer = databaseData.find(p => p.name === stats.name);
     if (leaderBadgesContainer) {
-        const dbPlayer = databaseData.find(p => p.name === stats.name);
         leaderBadgesContainer.innerHTML = renderLeaderBadgesHtml(dbPlayer);
+    }
+    if (rankingContainer) {
+        const eloRank = dbPlayer && dbPlayer.elo_rank ? dbPlayer.elo_rank : null;
+        rankingContainer.innerHTML = eloRank ? `<span class="player-rank-pill">Rank #${eloRank}</span>` : '';
     }
     
     // Update overview stats
@@ -923,38 +940,115 @@ function displayPlayerStats(stats) {
     displayMatchHistory(stats.match_history);
 }
 
-function drawELOGraph(stats) {
+async function drawELOGraph(stats) {
     const canvas = document.getElementById('elo-graph');
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
     
-    // Set canvas size
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 200;
+    // HiDPI canvas
+    const cssWidth = canvas.offsetWidth || 600;
+    const cssHeight = 200;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(cssWidth * dpr);
+    canvas.height = Math.floor(cssHeight * dpr);
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     
     // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
     
-    // Draw placeholder message
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    // ctx.fillText('ELO History Graph (Coming Soon)', canvas.width / 2, canvas.height / 2);
-    
-    // For now, just show current ELO as a single point
-    if (stats.matches > 0) {
-        const x = canvas.width / 2;
-        const y = canvas.height / 2;
-        ctx.fillStyle = '#f97316';
-        ctx.beginPath();
-        ctx.arc(x, y, 8, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText(`${stats.elo} ELO`, x, y - 15);
+    // Fetch daily ELO history
+    let history = [];
+    try {
+        const res = await fetch(`/api/elo-history/${encodeURIComponent(stats.name)}`);
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.history)) {
+            history = data.history;
+        }
+    } catch (e) {
+        // fall back to point
     }
+
+    // If no history yet, show a single point (today)
+    if (!history || history.length === 0) {
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('No daily ELO history yet', cssWidth / 2, cssHeight / 2 - 8);
+        if (stats.elo !== undefined) {
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(cssWidth / 2, cssHeight / 2 + 18, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px Arial';
+            ctx.fillText(`${stats.elo} ELO`, cssWidth / 2, cssHeight / 2 + 40);
+        }
+        return;
+    }
+
+    const pad = 28;
+    const w = cssWidth;
+    const h = cssHeight;
+    const plotW = w - pad * 2;
+    const plotH = h - pad * 2;
+    const values = history.map(p => Number(p.elo));
+    let minE = Math.min(...values);
+    let maxE = Math.max(...values);
+    if (minE === maxE) {
+        minE -= 10;
+        maxE += 10;
+    }
+    const n = history.length;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = pad + (plotH * i) / 4;
+        ctx.beginPath();
+        ctx.moveTo(pad, y);
+        ctx.lineTo(w - pad, y);
+        ctx.stroke();
+    }
+
+    // Axes labels (min/max)
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${maxE}`, pad, pad - 8);
+    ctx.fillText(`${minE}`, pad, h - pad + 16);
+
+    // Line
+    const xFor = (i) => pad + (plotW * (n === 1 ? 0.5 : i / (n - 1)));
+    const yFor = (elo) => pad + plotH * (1 - (elo - minE) / (maxE - minE));
+
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    history.forEach((p, i) => {
+        const x = xFor(i);
+        const y = yFor(Number(p.elo));
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Last point + label
+    const last = history[history.length - 1];
+    const lx = xFor(history.length - 1);
+    const ly = yFor(Number(last.elo));
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${last.elo} ELO`, w - pad, pad - 8);
 }
 
 function displayMatchHistory(matchHistory) {

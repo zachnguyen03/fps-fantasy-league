@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request, send_from_directory
 import numpy as np
 from random import sample, choice
+from datetime import date
 import pandas as pd
 import os
 import base64
@@ -192,6 +193,21 @@ def update_database_stats():
     global_context["database"] = df_new
     db.bulk_update_from_dataframe(df_new)
     return df_new
+
+def record_daily_elo_snapshots(df_current):
+    """Record one ELO snapshot per player for today (idempotent)."""
+    try:
+        if df_current is None or df_current.empty:
+            return
+        # Ensure baseline exists before we start recording real snapshots
+        try:
+            db.ensure_initial_elo_baseline(default_elo=1000)
+        except Exception:
+            pass
+        player_elo_map = {str(r["Name"]): int(r["ELO"]) for _, r in df_current[["Name", "ELO"]].iterrows()}
+        db.upsert_daily_elo_snapshots(player_elo_map, day_str=date.today().isoformat())
+    except Exception as e:
+        print(f"Error recording ELO snapshots: {e}")
 
 @app.route('/', methods=['GET'])
 def index():
@@ -390,13 +406,14 @@ def get_database():
     online_players_set = set(online_df["Name"].tolist())
     
     players = []
-    for _, row in df_current.iterrows():
+    for i, (_, row) in enumerate(df_current.iterrows()):
         rank = get_rank(row["ELO"])
         icon_data = get_rank_icon_base64(rank)
         streak = calculate_streak(row["Name"])
         players.append({
             "name": row["Name"],
             "elo": int(row["ELO"]),
+            "elo_rank": int(i + 1),
             "rating": round(row["Rating"], 2),
             "matches": int(row["Matches"]),
             "wins": int(row["Wins"]),
@@ -709,6 +726,9 @@ def get_records():
         best_deaths = None
         best_rating = None
         best_kpr = None
+        best_adr = None
+        worst_kpr = None
+        worst_rating = None
 
         def _better(curr, cand):
             if cand is None:
@@ -716,6 +736,13 @@ def get_records():
             if curr is None:
                 return cand
             return cand if cand["value"] > curr["value"] else curr
+
+        def _worse(curr, cand):
+            if cand is None:
+                return curr
+            if curr is None:
+                return cand
+            return cand if cand["value"] < curr["value"] else curr
 
         for m in matches:
             match_num = m.get("match_num")
@@ -764,6 +791,9 @@ def get_records():
                 best_deaths = _better(best_deaths, {**base, "value": float(d)})
                 best_rating = _better(best_rating, {**base, "value": float(rating)})
                 best_kpr = _better(best_kpr, {**base, "value": float(kpr)})
+                best_adr = _better(best_adr, {**base, "value": float(adr)})
+                worst_kpr = _worse(worst_kpr, {**base, "value": float(kpr)})
+                worst_rating = _worse(worst_rating, {**base, "value": float(rating)})
 
         records = {
             "longest_match": _match_summary(longest),
@@ -772,6 +802,9 @@ def get_records():
             "highest_deaths_single_match": best_deaths,
             "highest_rating_single_match": best_rating,
             "highest_kpr_single_match": best_kpr,
+            "highest_adr_single_match": best_adr,
+            "lowest_kpr_single_match": worst_kpr,
+            "lowest_rating_single_match": worst_rating,
         }
 
         return jsonify({"success": True, "records": records})
@@ -984,6 +1017,10 @@ def submit_match():
     
     # Get updated top 3 with rank icons
     df_updated = global_context["database"]
+
+    # Record daily ELO snapshots after match submission
+    record_daily_elo_snapshots(df_updated)
+
     top_3 = df_updated.head(3)
     top_3_list = []
     for _, row in top_3.iterrows():
@@ -1021,11 +1058,23 @@ def update_online_players():
             "rank_icon": icon_data
         })
     
+    # Record daily ELO snapshots (safe to call hourly)
+    record_daily_elo_snapshots(df_updated)
+
     return jsonify({
         "success": True,
         "top_3": top_3_list,
         "online_players": online_df["Name"].tolist()
     })
+
+@app.route('/api/elo-history/<player_name>')
+def get_elo_history(player_name):
+    """Get daily ELO history for a player."""
+    try:
+        history = db.get_elo_history(player_name, days=365, fill_missing_days=True)
+        return jsonify({"success": True, "player": player_name, "history": history})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "player": player_name, "history": []}), 500
 
 @app.route('/api/map-stats')
 def get_map_stats():

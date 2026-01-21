@@ -250,9 +250,9 @@ h1, h2, h3 {
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.15px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
     text-transform: uppercase;
     line-height: 1.1;
 }
@@ -268,6 +268,30 @@ h1, h2, h3 {
     display: inline-flex;
     flex-wrap: nowrap;
     gap: 3px;
+    max-width: 160px;
+    overflow: hidden;
+    position: relative;
+}
+
+.player-card .leader-badges.has-overflow::after {
+    content: attr(data-remaining);
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg, transparent 0%, rgba(11, 16, 32, 0.98) 20%, rgba(11, 16, 32, 0.98) 100%);
+    padding-left: 6px;
+    padding-right: 2px;
+    font-size: 0.5rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.player-card .leader-badges.has-overflow {
+    padding-right: 35px;
 }
 
 .player-card .leader-badge {
@@ -279,6 +303,169 @@ h1, h2, h3 {
 .leader-badge.kpr { border-color: rgba(16, 185, 129, 0.35); }
 .leader-badge.rating { border-color: rgba(59, 130, 246, 0.35); }
 .leader-badge.kd { border-color: rgba(245, 158, 11, 0.35); }
+.leader-badge.apr { border-color: rgba(168, 85, 247, 0.35); }
+
+/* Champion badges (rank #1) - fiery and vibrant */
+.leader-badge.champion {
+    background: linear-gradient(135deg, #ff5722 0%, #ff9800 50%, #ffc107 100%);
+    border-color: #ff9800;
+    color: #ffffff;
+    font-weight: 800;
+    box-shadow: 
+        0 0 12px rgba(255, 152, 0, 0.6),
+        0 0 20px rgba(255, 87, 34, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    animation: championGlow 2s ease-in-out infinite alternate;
+    position: relative;
+}
+
+.leader-badge.champion::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #ff5722, #ff9800, #ffc107);
+    border-radius: 8px;
+    z-index: -1;
+    opacity: 0.6;
+    animation: championPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes championGlow {
+    0% {
+        box-shadow: 
+            0 0 12px rgba(255, 152, 0, 0.6),
+            0 0 20px rgba(255, 87, 34, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    100% {
+        box-shadow: 
+            0 0 18px rgba(255, 152, 0, 0.9),
+            0 0 30px rgba(255, 87, 34, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    }
+}
+
+@keyframes championPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.02); }
+}
+
+.leader-badge.champion.adr { 
+    background: linear-gradient(135deg, #ff5722 0%, #ff9800 50%, #f97316 100%);
+    border-color: #ff9800;
+    color: #ffffff;
+}
+.leader-badge.champion.kpr { 
+    background: linear-gradient(135deg, #ff5722 0%, #ff9800 50%, #10b981 100%);
+    border-color: #ff9800;
+    color: #ffffff;
+}
+.leader-badge.champion.rating { 
+    background: linear-gradient(135deg, #ff5722 0%, #ff9800 50%, #3b82f6 100%);
+    border-color: #ff9800;
+    color: #ffffff;
+}
+.leader-badge.champion.kd { 
+    background: linear-gradient(135deg, #ff5722 0%, #ff9800 50%, #f59e0b 100%);
+    border-color: #ff9800;
+    color: #ffffff;
+}
+.leader-badge.champion.apr { 
+    background: linear-gradient(135deg, #ff5722 0%, #ff9800 50%, #a855f7 100%);
+    border-color: #ff9800;
+    color: #ffffff;
+}
+
+/* Leader badges (rank #2-5) - vibrant */
+.leader-badge.leader {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.leader-badge.leader.adr { 
+    background: linear-gradient(135deg, #f97316 0%, #ff9800 100%);
+    border-color: #f97316;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+}
+.leader-badge.leader.kpr { 
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #10b981;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+.leader-badge.leader.rating { 
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+.leader-badge.leader.kd { 
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-color: #f59e0b;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+.leader-badge.leader.apr { 
+    background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+    border-color: #a855f7;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+}
+
+/* Cold badges (worst performers) - blue/cold theme */
+.leader-badge.cold-champion,
+.leader-badge.cold-leader {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.leader-badge.cold-champion {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+    border-color: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.leader-badge.cold-champion.adr,
+.leader-badge.cold-leader.adr { 
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+.leader-badge.cold-champion.kpr,
+.leader-badge.cold-leader.kpr { 
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+.leader-badge.cold-champion.rating,
+.leader-badge.cold-leader.rating { 
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+.leader-badge.cold-champion.kd,
+.leader-badge.cold-leader.kd { 
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+.leader-badge.cold-champion.apr,
+.leader-badge.cold-leader.apr { 
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
 
 /* Records */
 .records-cards {

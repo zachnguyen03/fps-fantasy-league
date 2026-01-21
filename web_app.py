@@ -413,7 +413,7 @@ def get_database():
             "is_online": row["Name"] in online_players_set
         })
     
-    # Identify top 3 players for each stat with their ranks
+    # Identify top 5 and worst 5 players for each stat with their ranks
     players_sorted_rating = sorted(players, key=lambda x: x['rating'], reverse=True)
     players_sorted_kd = sorted(players, key=lambda x: x['kd'], reverse=True)
     players_sorted_kpr = sorted(players, key=lambda x: x['kpr'], reverse=True)
@@ -421,55 +421,127 @@ def get_database():
     players_sorted_apr = sorted(players, key=lambda x: x['apr'], reverse=True)
     players_sorted_adr = sorted(players, key=lambda x: x['adr'], reverse=True)
     
-    # Create dictionaries mapping player names to their rank (1, 2, 3) for each stat
-    top3_rating_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_rating[:3])}
-    top3_kd_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_kd[:3])}
-    top3_kpr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_kpr[:3])}
-    top3_dpr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_dpr[:3])}  # Lower DPR is better
-    top3_apr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_apr[:3])}
-    top3_adr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_adr[:3])}
+    # Create dictionaries mapping player names to their rank (1-5 for top, 1-5 for worst)
+    top5_rating_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_rating[:5])}
+    top5_kd_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_kd[:5])}
+    top5_kpr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_kpr[:5])}
+    top5_dpr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_dpr[:5])}  # Lower DPR is better
+    top5_apr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_apr[:5])}
+    top5_adr_ranks = {p['name']: i+1 for i, p in enumerate(players_sorted_adr[:5])}
     
-    # Add top 3 rank to each player (0 means not in top 3)
+    # Worst 5 (rank 1 = worst, rank 5 = 5th worst)
+    # For stats where higher is better, worst = last 5 in descending order (reversed to get worst first)
+    worst5_rating_ranks = {p['name']: i+1 for i, p in enumerate(reversed(players_sorted_rating[-5:]))}
+    worst5_kd_ranks = {p['name']: i+1 for i, p in enumerate(reversed(players_sorted_kd[-5:]))}
+    worst5_kpr_ranks = {p['name']: i+1 for i, p in enumerate(reversed(players_sorted_kpr[-5:]))}
+    worst5_apr_ranks = {p['name']: i+1 for i, p in enumerate(reversed(players_sorted_apr[-5:]))}
+    worst5_adr_ranks = {p['name']: i+1 for i, p in enumerate(reversed(players_sorted_adr[-5:]))}
+    # DPR: already sorted ascending (lower is better), so worst = last 5 (reversed to get worst first)
+    worst5_dpr_ranks = {p['name']: i+1 for i, p in enumerate(reversed(players_sorted_dpr[-5:]))}
+    
+    # Add rank info to each player (0 means not in top/worst 5)
     for player in players:
-        player['top3_rating_rank'] = top3_rating_ranks.get(player['name'], 0)
-        player['top3_kd_rank'] = top3_kd_ranks.get(player['name'], 0)
-        player['top3_kpr_rank'] = top3_kpr_ranks.get(player['name'], 0)
-        player['top3_dpr_rank'] = top3_dpr_ranks.get(player['name'], 0)
-        player['top3_apr_rank'] = top3_apr_ranks.get(player['name'], 0)
-        player['top3_adr_rank'] = top3_adr_ranks.get(player['name'], 0)
-        # Leader badges (rank #1 for that stat)
-        player['is_rating_leader'] = player['top3_rating_rank'] == 1
-        player['is_kd_leader'] = player['top3_kd_rank'] == 1
-        player['is_kpr_leader'] = player['top3_kpr_rank'] == 1
-        player['is_adr_leader'] = player['top3_adr_rank'] == 1
+        # Top ranks
+        player['top5_rating_rank'] = top5_rating_ranks.get(player['name'], 0)
+        player['top5_kd_rank'] = top5_kd_ranks.get(player['name'], 0)
+        player['top5_kpr_rank'] = top5_kpr_ranks.get(player['name'], 0)
+        player['top5_dpr_rank'] = top5_dpr_ranks.get(player['name'], 0)
+        player['top5_apr_rank'] = top5_apr_ranks.get(player['name'], 0)
+        player['top5_adr_rank'] = top5_adr_ranks.get(player['name'], 0)
+        
+        # Worst ranks
+        player['worst5_rating_rank'] = worst5_rating_ranks.get(player['name'], 0)
+        player['worst5_kd_rank'] = worst5_kd_ranks.get(player['name'], 0)
+        player['worst5_kpr_rank'] = worst5_kpr_ranks.get(player['name'], 0)
+        player['worst5_dpr_rank'] = worst5_dpr_ranks.get(player['name'], 0)
+        player['worst5_apr_rank'] = worst5_apr_ranks.get(player['name'], 0)
+        player['worst5_adr_rank'] = worst5_adr_ranks.get(player['name'], 0)
+        
+        # Legacy top3 ranks for backward compatibility
+        player['top3_rating_rank'] = player['top5_rating_rank'] if player['top5_rating_rank'] <= 3 else 0
+        player['top3_kd_rank'] = player['top5_kd_rank'] if player['top5_kd_rank'] <= 3 else 0
+        player['top3_kpr_rank'] = player['top5_kpr_rank'] if player['top5_kpr_rank'] <= 3 else 0
+        player['top3_dpr_rank'] = player['top5_dpr_rank'] if player['top5_dpr_rank'] <= 3 else 0
+        player['top3_apr_rank'] = player['top5_apr_rank'] if player['top5_apr_rank'] <= 3 else 0
+        player['top3_adr_rank'] = player['top5_adr_rank'] if player['top5_adr_rank'] <= 3 else 0
+        
+        # Leader badges (rank #1 = champion, rank #2-5 = leader)
+        player['is_rating_champion'] = player['top5_rating_rank'] == 1
+        player['is_kd_champion'] = player['top5_kd_rank'] == 1
+        player['is_kpr_champion'] = player['top5_kpr_rank'] == 1
+        player['is_apr_champion'] = player['top5_apr_rank'] == 1
+        player['is_adr_champion'] = player['top5_adr_rank'] == 1
+        
+        player['is_rating_leader'] = 2 <= player['top5_rating_rank'] <= 5
+        player['is_kd_leader'] = 2 <= player['top5_kd_rank'] <= 5
+        player['is_kpr_leader'] = 2 <= player['top5_kpr_rank'] <= 5
+        player['is_apr_leader'] = 2 <= player['top5_apr_rank'] <= 5
+        player['is_adr_leader'] = 2 <= player['top5_adr_rank'] <= 5
+        
+        # Cold badges (worst performers)
+        player['is_rating_cold_champion'] = player['worst5_rating_rank'] == 1
+        player['is_kd_cold_champion'] = player['worst5_kd_rank'] == 1
+        player['is_kpr_cold_champion'] = player['worst5_kpr_rank'] == 1
+        player['is_apr_cold_champion'] = player['worst5_apr_rank'] == 1
+        player['is_adr_cold_champion'] = player['worst5_adr_rank'] == 1
+        
+        player['is_rating_cold_leader'] = 2 <= player['worst5_rating_rank'] <= 5
+        player['is_kd_cold_leader'] = 2 <= player['worst5_kd_rank'] <= 5
+        player['is_kpr_cold_leader'] = 2 <= player['worst5_kpr_rank'] <= 5
+        player['is_apr_cold_leader'] = 2 <= player['worst5_apr_rank'] <= 5
+        player['is_adr_cold_leader'] = 2 <= player['worst5_adr_rank'] <= 5
     return jsonify(players)
 
 def _compute_global_leader_names(df_current):
-    """Compute global #1 leader names for selected stats from current DB snapshot."""
-    leaders = {
-        "rating": None,
-        "kd": None,
-        "kpr": None,
-        "adr": None,
+    """Compute global top 5 and worst 5 ranks for selected stats from current DB snapshot."""
+    stats_info = {
+        "rating": {"col": "Rating", "reverse": True},
+        "kd": {"col": "K/D", "reverse": True},
+        "kpr": {"col": "KPR", "reverse": True},
+        "apr": {"col": "APR", "reverse": True},
+        "adr": {"col": "ADR", "reverse": True},
     }
+    
+    result = {}
     try:
         if df_current is None or df_current.empty:
-            return leaders
-        # Use numeric coercion + idxmax safety
-        for key, col in [("rating", "Rating"), ("kd", "K/D"), ("kpr", "KPR"), ("adr", "ADR")]:
+            return result
+        
+        for key, info in stats_info.items():
+            col = info["col"]
+            reverse = info["reverse"]
             if col not in df_current.columns:
                 continue
+            
             series = pd.to_numeric(df_current[col], errors="coerce")
             if series.isna().all():
                 continue
-            idx = series.idxmax()
-            try:
-                leaders[key] = str(df_current.loc[idx, "Name"])
-            except Exception:
-                leaders[key] = None
-    except Exception:
-        return leaders
-    return leaders
+            
+            # Sort by the stat value
+            sorted_df = df_current.sort_values(col, ascending=not reverse).reset_index(drop=True)
+            
+            # Top 5 (rank 1-5)
+            top5 = {}
+            for i in range(min(5, len(sorted_df))):
+                name = str(sorted_df.iloc[i]["Name"])
+                top5[name] = i + 1
+            
+            # Worst 5 (last 5 in sorted order, reversed so rank 1 = worst)
+            worst5 = {}
+            worst_players = sorted_df.iloc[max(0, len(sorted_df) - 5):].iloc[::-1]  # Reverse to get worst first
+            for i in range(len(worst_players)):
+                name = str(worst_players.iloc[i]["Name"])
+                worst5[name] = i + 1  # Rank 1 = worst, rank 5 = 5th worst
+            
+            result[key] = {
+                "top5": top5,
+                "worst5": worst5
+            }
+    except Exception as e:
+        print(f"Error computing leader names: {e}")
+        return result
+    
+    return result
 
 @app.route('/api/create-match', methods=['POST'])
 def create_match():
@@ -540,6 +612,22 @@ def create_match():
     df_all_sorted = df_current.sort_values('ELO', ascending=False).reset_index(drop=True)
     player_ranks = {name: idx + 1 for idx, name in enumerate(df_all_sorted["Name"])}
     
+    # Helper function to get badge flags for a player
+    def get_badge_flags(player_name):
+        flags = {}
+        for stat_key in ["rating", "kd", "kpr", "apr", "adr"]:
+            if stat_key not in leaders:
+                continue
+            stat_info = leaders[stat_key]
+            top5_rank = stat_info["top5"].get(player_name, 0)
+            worst5_rank = stat_info["worst5"].get(player_name, 0)
+            
+            flags[f"is_{stat_key}_champion"] = top5_rank == 1
+            flags[f"is_{stat_key}_leader"] = 2 <= top5_rank <= 5
+            flags[f"is_{stat_key}_cold_champion"] = worst5_rank == 1
+            flags[f"is_{stat_key}_cold_leader"] = 2 <= worst5_rank <= 5
+        return flags
+    
     # Format teams
     team_1 = []
     for _, row in df_1.iterrows():
@@ -547,6 +635,7 @@ def create_match():
         icon_data = get_rank_icon_base64(rank)
         streak = calculate_streak(row["Name"])
         player_rank = player_ranks.get(row["Name"], 0)
+        badge_flags = get_badge_flags(row["Name"])
         team_1.append({
             "name": row["Name"],
             "rank_icon": icon_data,
@@ -555,10 +644,7 @@ def create_match():
             "streak_type": streak["type"],
             "streak_count": streak["count"],
             "rank": player_rank,
-            "is_rating_leader": (row["Name"] == leaders.get("rating")),
-            "is_kd_leader": (row["Name"] == leaders.get("kd")),
-            "is_kpr_leader": (row["Name"] == leaders.get("kpr")),
-            "is_adr_leader": (row["Name"] == leaders.get("adr")),
+            **badge_flags
         })
     
     team_2 = []
@@ -567,6 +653,7 @@ def create_match():
         icon_data = get_rank_icon_base64(rank)
         streak = calculate_streak(row["Name"])
         player_rank = player_ranks.get(row["Name"], 0)
+        badge_flags = get_badge_flags(row["Name"])
         team_2.append({
             "name": row["Name"],
             "rank_icon": icon_data,
@@ -575,10 +662,7 @@ def create_match():
             "streak_type": streak["type"],
             "streak_count": streak["count"],
             "rank": player_rank,
-            "is_rating_leader": (row["Name"] == leaders.get("rating")),
-            "is_kd_leader": (row["Name"] == leaders.get("kd")),
-            "is_kpr_leader": (row["Name"] == leaders.get("kpr")),
-            "is_adr_leader": (row["Name"] == leaders.get("adr")),
+            **badge_flags
         })
     
     # Generate command

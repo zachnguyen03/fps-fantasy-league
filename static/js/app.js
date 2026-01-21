@@ -22,14 +22,47 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
-function renderLeaderBadgesHtml(player) {
+function renderLeaderBadgesHtml(player, maxBadges = null) {
     if (!player) return '';
     const badges = [];
-    if (player.is_adr_leader) badges.push('<span class="leader-badge adr">ADR Leader</span>');
-    if (player.is_kpr_leader) badges.push('<span class="leader-badge kpr">KPR Leader</span>');
-    if (player.is_rating_leader) badges.push('<span class="leader-badge rating">Rating Leader</span>');
-    if (player.is_kd_leader) badges.push('<span class="leader-badge kd">K/D Leader</span>');
+    
+    // Champions (rank #1)
+    if (player.is_adr_champion) badges.push('<span class="leader-badge adr champion">ADR Champion</span>');
+    if (player.is_kpr_champion) badges.push('<span class="leader-badge kpr champion">KPR Champion</span>');
+    if (player.is_rating_champion) badges.push('<span class="leader-badge rating champion">Rating Champion</span>');
+    if (player.is_kd_champion) badges.push('<span class="leader-badge kd champion">K/D Champion</span>');
+    if (player.is_apr_champion) badges.push('<span class="leader-badge apr champion">APR Champion</span>');
+    
+    // Leaders (rank #2-5)
+    if (player.is_adr_leader) badges.push('<span class="leader-badge adr leader">ADR Leader</span>');
+    if (player.is_kpr_leader) badges.push('<span class="leader-badge kpr leader">KPR Leader</span>');
+    if (player.is_rating_leader) badges.push('<span class="leader-badge rating leader">Rating Leader</span>');
+    if (player.is_kd_leader) badges.push('<span class="leader-badge kd leader">K/D Leader</span>');
+    if (player.is_apr_leader) badges.push('<span class="leader-badge apr leader">APR Leader</span>');
+    
+    // Cold Champions (worst rank #1)
+    if (player.is_adr_cold_champion) badges.push('<span class="leader-badge adr cold-champion">ADR Cold</span>');
+    if (player.is_kpr_cold_champion) badges.push('<span class="leader-badge kpr cold-champion">KPR Cold</span>');
+    if (player.is_rating_cold_champion) badges.push('<span class="leader-badge rating cold-champion">Rating Cold</span>');
+    if (player.is_kd_cold_champion) badges.push('<span class="leader-badge kd cold-champion">K/D Cold</span>');
+    if (player.is_apr_cold_champion) badges.push('<span class="leader-badge apr cold-champion">APR Cold</span>');
+    
+    // Cold Leaders (worst rank #2-5)
+    if (player.is_adr_cold_leader) badges.push('<span class="leader-badge adr cold-leader">ADR Cold</span>');
+    if (player.is_kpr_cold_leader) badges.push('<span class="leader-badge kpr cold-leader">KPR Cold</span>');
+    if (player.is_rating_cold_leader) badges.push('<span class="leader-badge rating cold-leader">Rating Cold</span>');
+    if (player.is_kd_cold_leader) badges.push('<span class="leader-badge kd cold-leader">K/D Cold</span>');
+    if (player.is_apr_cold_leader) badges.push('<span class="leader-badge apr cold-leader">APR Cold</span>');
+    
     if (badges.length === 0) return '';
+    
+    // If maxBadges is specified and we have more badges, show overflow indicator
+    if (maxBadges !== null && badges.length > maxBadges) {
+        const visibleBadges = badges.slice(0, maxBadges);
+        const remaining = badges.length - maxBadges;
+        return `<div class="leader-badges has-overflow" data-remaining="+${remaining}">${visibleBadges.join('')}</div>`;
+    }
+    
     return `<div class="leader-badges">${badges.join('')}</div>`;
 }
 
@@ -452,7 +485,7 @@ function renderTeam(cardsId, team) {
                     <span class="player-card-name">
                         ${player.name}
                         ${streakDisplay ? `<span class="player-card-streak">${streakDisplay}</span>` : ''}
-                        ${renderLeaderBadgesHtml(player)}
+                        ${renderLeaderBadgesHtml(player, 3)}
                     </span>
                     <span class="player-card-rank-text">Rank #${player.rank || 'N/A'}</span>
                 </div>

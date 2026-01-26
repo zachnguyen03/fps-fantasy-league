@@ -1,5 +1,5 @@
 # [CS:GO Autistic Simulator](https://github.com/zachnguyen03/fps-fantasy-league)
-Season 4 coming soon....
+Season 4 LIVE!
 
 by anhster (in development stage)
 

@@ -46,4 +46,5 @@ The following installation suppose `python=3.9` `gradio`
 - [x] Database Integration
 - [x] Player + Map Stats + Match History Available
 - [ ] Live Integration with game API
-- [ ] Advanced statistics summary
+- [x] Advanced statistics summary
+- [x] ELO progression logging
